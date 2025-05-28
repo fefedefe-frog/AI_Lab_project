@@ -1,26 +1,30 @@
 import torch
 import torch.nn.functional as F
 from torchvision import transforms
-from PIL import Image
 import os
+import cv2
+from cnn_card_classifier import DualHeadCNN
 
 # === CONFIGURAZIONE ===
-MODEL_PATH = "modello_addestrato.pth"      # Path al tuo modello
-IMAGE_PATH = "immagine_di_test.jpg"        # Immagine da classificare
+MODEL_PATH = "cnn_allenata.pth"      # Path al tuo modello
+IMAGE_PATH = "test_images/test3.png"        # Immagine da classificare
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # === Trasformazioni immagine (modifica se servono altre) ===
 transform = transforms.Compose([
-    transforms.Resize((128, 128)),         # stessa dimensione usata in training
-    transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5])     # o [0.5, 0.5, 0.5] per RGB
+    transforms.ToPILImage(),
+    transforms.Resize((240, 180)), #TODO: trasformare da 80x60 a 128x128es stretcha l'immagine e quindi la distorce, meglio aggiungere dei bordi se si vuole l'immagine quadrata
+    transforms.ToTensor(),  # converte e normalizza da [0–255] → [0–1]
+    transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)  # ora [0–1] → [-1, 1]
 ])
 
 # === Carica immagine ===
 if not os.path.isfile(IMAGE_PATH):
     raise FileNotFoundError(f"{IMAGE_PATH} non trovato")
 
-img = Image.open(IMAGE_PATH).convert("RGB")
+img = cv2.imread(IMAGE_PATH)
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
 input_tensor = transform(img).unsqueeze(0).to(DEVICE)  # shape: (1, C, H, W)
 
 # === Carica modello ===
