@@ -33,7 +33,7 @@ class CardDataset(Dataset):
     def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         riga= self.csv_data.iloc[idx]
 
-        image_path= str(riga["image_path"])
+        image_path= "..\cnn_dataset_maker\\" + str(riga["image_path"])
         seme= self.seme_to_idx[riga["seme"]]
         numero= self.numero_to_idx[riga["numero"]]
 
@@ -65,7 +65,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)  # ora [0–1] → [-1, 1]
 ])
 
-dataset = CardDataset("../cnn_dataset/dataset.csv", transform=transform)
+dataset = CardDataset("../cnn_dataset_maker/output/dataset.csv", transform=transform)
 
 train_size = int(0.8 * len(dataset))
 test_size = len(dataset) - train_size
@@ -101,19 +101,22 @@ class DualHeadCNN(nn.Module):
         # Sezione con con activation function
         self.flatten = nn.Flatten()
         self.shared_layers= nn.Sequential(
-            nn.Linear(256 * 30 * 22, 128),
+            nn.Linear(256 * 30 * 22, 256),
             nn.ReLU(),
 
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
             nn.ReLU(),
 
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+
+            nn.Linear(256, 256),
             nn.ReLU(),
         )
 
         # Due teste separate per la doppia classificazione
-        self.testa_seme= nn.Linear(128, num_classi_seme)
-        self.testa_numero= nn.Linear(128, num_classi_numeri)
+        self.testa_seme= nn.Linear(256, num_classi_seme)
+        self.testa_numero= nn.Linear(256, num_classi_numeri)
 
     def forward(self, x):
         x_features = self.featuresExtractor(x)
@@ -139,6 +142,15 @@ metric_seme = torchmetrics.Accuracy(task='multiclass', num_classes=4).to(device)
 metric_numero = torchmetrics.Accuracy(task='multiclass', num_classes=13).to(device)
 
 
+train_losses_seme = []
+train_losses_numero = []
+testing_losses_seme = []
+testing_losses_numero = []
+accuracy_numero = []
+accuracy_seme = []
+acc_test_seme = []
+acc_test_numero = []
+
 def training_loop(dataloader, model, loss_fn, optimizer):
     model.train()
     dataset_size = len(dataloader)
@@ -160,6 +172,10 @@ def training_loop(dataloader, model, loss_fn, optimizer):
         loss_seme = loss_fn(pred_seme, seme_labels)
         loss_numero = loss_fn(pred_numero, numero_labels)
 
+        # Aggiorno array per plot
+        train_losses_seme.append(loss_seme)
+        train_losses_numero.append(loss_numero)
+
         # eseguo il passaggio di backpropagation
         loss= loss_seme + loss_numero
         optimizer.zero_grad()
@@ -179,9 +195,13 @@ def training_loop(dataloader, model, loss_fn, optimizer):
             acc_numero = metric_numero.compute()
             print(f"Accuracy seme: {acc_seme} || {acc_seme * 100:.2f}%\nAccuracy numero: {acc_numero} || {acc_numero * 100:.2f}%")
 
-    # stmpo l'accuratezza alla fine del training
+    # stampo l'accuratezza alla fine del training
     acc_seme= metric_seme.compute()
     acc_numero = metric_numero.compute()
+
+    # aggiorno gli array per plot
+    accuracy_seme.append(acc_seme)
+    accuracy_seme.append(acc_numero)
     print(f"Final Training Accuracy \n\t- Seme: {acc_seme} || {acc_seme * 100:.2f}%\n\t- Numero: {acc_numero} || {acc_numero * 100:.2f}%")
 
 
@@ -205,10 +225,19 @@ def testing_loop(dataloader, model):
             metric_seme.update(pred_seme, seme_labels)
             metric_numero.update(pred_numero, numero_labels)
 
+            loss_n = loss_fn(numero_logits, numero_labels)
+            loss_s = loss_fn(seme_logits, seme_labels)
+
+            testing_losses_numero.append(loss_n)
+            testing_losses_seme.append(loss_s)
 
     # stampo direttamente l'accuratezza finale
     acc_seme = metric_seme.compute()
     acc_numero = metric_numero.compute()
+
+    # aggiorno gli array per plot
+    acc_test_seme.append(acc_seme)
+    acc_test_numero.append(acc_numero)
     print(f"\n\nFinal Testing Accuracy \n\t- Seme: {acc_seme} || {acc_seme * 100:.2f}%\n\t- Numero: {acc_numero} || {acc_numero * 100:.2f}%")
 
 
@@ -220,6 +249,7 @@ for e in range(epochs):
     testing_loop(test_loader, model)
 print("Fatto!")
 
+torch.save(model, "cnn_allenata.pth")
 
 # Confusion Matrixs
 all_preds_seme = []
@@ -245,6 +275,7 @@ with torch.no_grad():
 cm_seme = confusion_matrix(all_labels_seme, all_preds_seme)
 disp_seme = ConfusionMatrixDisplay(confusion_matrix=cm_seme, display_labels=dataset.seme_classes)
 fig_seme, ax = plt.subplots()
+fig_seme.savefig("confusion_matrix_seme.png")
 disp_seme.plot(ax=ax)
 plt.title("Confusion Matrix - Seme")
 plt.show()
@@ -253,6 +284,63 @@ plt.show()
 cm_numero = confusion_matrix(all_labels_numero, all_preds_numero)
 disp_numero = ConfusionMatrixDisplay(confusion_matrix=cm_numero, display_labels=dataset.numero_classes)
 fig_numero, ax = plt.subplots()
+fig_numero.savefig("confusion_matrix_numero.png")
 disp_numero.plot(ax=ax)
 plt.title("Confusion Matrix - Numero")
 plt.show()
+
+
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+
+# Loss - Training e Testing
+axs[0, 0].plot(epochs, train_losses_seme, label="Train Loss", color='blue')
+axs[0, 0].plot(epochs, testing_losses_seme, label="Test Loss", color='orange')
+axs[0, 0].set_title("Loss")
+axs[0, 0].set_xlabel("Epoche")
+axs[0, 0].set_ylabel("Loss")
+axs[0, 0].legend()
+axs[0, 0].grid(True)
+
+# Loss - Training e Testing
+axs[0, 0].plot(epochs, train_losses_numero, label="Train Loss", color='blue')
+axs[0, 0].plot(epochs, testing_losses_numero, label="Test Loss", color='orange')
+axs[0, 0].set_title("Loss")
+axs[0, 0].set_xlabel("Epoche")
+axs[0, 0].set_ylabel("Loss")
+axs[0, 0].legend()
+axs[0, 0].grid(True)
+
+# Accuratezza numero
+axs[0, 1].plot(epochs, accuracy_numero, label="Training Accuracy Numero", color='green')
+axs[0, 1].set_title("Accuratezza Numero")
+axs[0, 1].set_xlabel("Epoche")
+axs[0, 1].set_ylabel("Accuratezza")
+axs[0, 1].grid(True)
+
+# Accuratezza seme
+axs[1, 0].plot(epochs, accuracy_seme, label="Training Accuracy Seme", color='purple')
+axs[1, 0].set_title("Accuratezza Seme")
+axs[1, 0].set_xlabel("Epoche")
+axs[1, 0].set_ylabel("Accuratezza")
+axs[1, 0].grid(True)
+
+# Accuratezza test numero
+axs[1, 0].plot(epochs, acc_test_seme, label="Testing Accuracy Seme", color='purple')
+axs[1, 0].set_title("Accuratezza Seme")
+axs[1, 0].set_xlabel("Epoche")
+axs[1, 0].set_ylabel("Accuratezza")
+axs[1, 0].grid(True)
+
+# Accuratezza test seme
+axs[1, 0].plot(epochs, acc_test_numero, label="Testing Accuracy Seme", color='purple')
+axs[1, 0].set_title("Accuratezza Seme")
+axs[1, 0].set_xlabel("Epoche")
+axs[1, 0].set_ylabel("Accuratezza")
+axs[1, 0].grid(True)
+
+# Spazio vuoto / futuro utilizzo (o puoi disegnare CM qui)
+axs[1, 1].axis("off")
+
+plt.tight_layout()
+plt.savefig("results.png")
+plt.close()
