@@ -1,3 +1,4 @@
+import argparse
 import csv
 import os
 import sys
@@ -14,67 +15,82 @@ INPUT_DIR_PATH = f"{SCRIPT_DIR}/input_images"
 OUTPUT_DIR_PATH = f"{SCRIPT_DIR}/output"
 CSV_PATH = "dataset.csv"
 
-img_num_for_card= 50
-
-# Lista file
-card_folders = [folder for folder in os.listdir(INPUT_DIR_PATH)]
-
-os.makedirs(OUTPUT_DIR_PATH, exist_ok=True)
-os.makedirs(os.path.dirname(os.path.join(OUTPUT_DIR_PATH, CSV_PATH)), exist_ok=True)
 
 # Grafichina per il terminale
 ProgressBar= ProgressBar()
 
-with open(os.path.join(OUTPUT_DIR_PATH, CSV_PATH), "w", newline="") as csvfile:
-  csv_writer = csv.writer(csvfile)
-  csv_writer.writerow(["image_path", "seme", "numero"])
+def generate(img_num_for_card: int= 10, output_path: str= OUTPUT_DIR_PATH):
 
-  for card_num, folder in enumerate(card_folders):
-    numero, seme= folder.split(".")
-    print(f"Total Progress:\t{ProgressBar.make_progress(card_num+1, len(card_folders))} {card_num+1}/{len(card_folders)}\nCurrent card: {numero} di {seme}")
+  if output_path is None:
+    output_path = OUTPUT_DIR_PATH
 
-    folder_path = os.path.join(INPUT_DIR_PATH, folder)
-    card_output_dir_path= os.path.join(OUTPUT_DIR_PATH, folder)
+  # Lista file
+  card_folders = [folder for folder in os.listdir(INPUT_DIR_PATH)]
 
-    os.makedirs(card_output_dir_path, exist_ok=True)
-    images= [img for img in os.listdir(folder_path) if img.endswith(".jpg")]
+  os.makedirs(output_path, exist_ok=True)
+  os.makedirs(os.path.dirname(os.path.join(output_path, CSV_PATH)), exist_ok=True)
 
-    for num, image in enumerate(images):
-      if num + 1 > img_num_for_card:
-        break
+  with open(os.path.join(output_path, CSV_PATH), "w", newline="") as csvfile:
+    csv_writer = csv.writer(csvfile)
+    csv_writer.writerow(["image_path", "seme", "numero"])
 
-      print(f"\r\tCount: {ProgressBar.make_progress(num+1, img_num_for_card)} {num+1}/{img_num_for_card}", end="")
+    for card_num, folder in enumerate(card_folders):
+      numero, seme= folder.split(".")
+      print(f"Total Progress:\t{ProgressBar.make_progress(card_num+1, len(card_folders))} {card_num+1}/{len(card_folders)}\nCurrent card: {numero} di {seme}")
 
-      # Viene caricata la carta
-      card_path = os.path.join(folder_path, image)
-      card_rgba = cv2.imread(card_path, cv2.IMREAD_UNCHANGED) # Carico anche alpha channel per la trasparenza
-      if card_rgba is None:
-        print(f"\n⚠️ Immagine non caricata correttamente: {card_path}, salto...")
-        continue
+      folder_path = os.path.join(INPUT_DIR_PATH, folder)
+      card_output_dir_path= os.path.join(output_path, folder)
 
-      # Viene ridimensionata la carta a 200x200 (anche se in teoria sono già tutte di questa dimensione)
-      card_rgba = cv2.resize(card_rgba, (200, 200))
+      os.makedirs(card_output_dir_path, exist_ok=True)
+      images= [img for img in os.listdir(folder_path) if img.endswith(".jpg")]
 
-      # Vengono separati i canali
-      card_rgb = card_rgba[:,:,:3] # primi 3 canali
+      for num, image in enumerate(images):
+        if num + 1 > img_num_for_card:
+          break
 
-      # Ritaglio la parte di immagine che interessa a me, ovvero solo l'angolo in alto a sinistra contentente simbolo e numero
-      card_cropped= card_rgb[0:80, 0:60]
+        print(f"\r\tCount: {ProgressBar.make_progress(num+1, img_num_for_card)} {num+1}/{img_num_for_card}", end="")
 
-      # Vengono applicate modifiche di luminosità casuali
-      brightness = random.uniform(0.8, 1.2)
-      card_cropped = np.clip(card_cropped * brightness, 0, 255).astype(np.uint8)
+        # Viene caricata la carta
+        card_path = os.path.join(folder_path, image)
+        card_rgba = cv2.imread(card_path, cv2.IMREAD_UNCHANGED) # Carico anche alpha channel per la trasparenza
+        if card_rgba is None:
+          print(f"\n⚠️ Immagine non caricata correttamente: {card_path}, salto...")
+          continue
+
+        # Viene ridimensionata la carta a 200x200 (anche se in teoria sono già tutte di questa dimensione)
+        card_rgba = cv2.resize(card_rgba, (200, 200))
+
+        # Vengono separati i canali
+        card_rgb = card_rgba[:,:,:3] # primi 3 canali
+
+        # Ritaglio la parte di immagine che interessa a me, ovvero solo l'angolo in alto a sinistra contentente simbolo e numero
+        card_cropped= card_rgb[0:80, 0:60]
+
+        # Vengono applicate modifiche di luminosità casuali
+        brightness = random.uniform(0.8, 1.2)
+        card_cropped = np.clip(card_cropped * brightness, 0, 255).astype(np.uint8)
 
 
-      # Viene salvata l'immagine
-      img_name = f"{num + 1}.jpg"
-      card_output_full_path = os.path.join(card_output_dir_path, img_name)
-      cv2.imwrite(card_output_full_path, card_cropped)
+        # Viene salvata l'immagine
+        img_name = f"{num + 1}.jpg"
+        card_output_full_path = os.path.join(card_output_dir_path, img_name)
+        cv2.imwrite(card_output_full_path, card_cropped)
 
-      # Aggiorno il csv
-      csv_writer.writerow([card_output_full_path, seme, numero])
+        # Aggiorno il csv
+        csv_writer.writerow([card_output_full_path, seme, numero])
 
-    # Va su di tre righe e cancella il contenuto
-    if card_num+1 != len(card_folders): sys.stdout.write('\033[F\033[K\033[F\033[K')
+      # Va su di tre righe e cancella il contenuto
+      if card_num+1 != len(card_folders): sys.stdout.write('\033[F\033[K\033[F\033[K')
 
-print("\n✅ Dataset creato con OpenCV!")
+  print("\n✅ Dataset creato con OpenCV!")
+
+
+parser= argparse.ArgumentParser(description="YOLO dataset maker, this script automatically generate the images and labels for yolo")
+parser.add_argument("image_num", type=int, help="how many images to generate")
+parser.add_argument("-o", "--output_path", type=str, help="output directory path where will be saved the dataset")
+
+
+if __name__ == "__main__":
+    args= parser.parse_args()
+
+    generate(args.image_num, args.output_path)
