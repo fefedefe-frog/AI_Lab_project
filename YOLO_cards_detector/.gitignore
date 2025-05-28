@@ -1,5 +1,6 @@
 /__pycache__
-/assets
 /blackjackDataset
 /mani_blackjack
 /runs
+/test_images
+/test_results

@@ -3,8 +3,8 @@ import cv2
 import os
 
 # === CONFIGURAZIONE ===
-MODEL_PATH = "runs/detect/yolo_s_30epochs3/weights/best.pt"  # <-- aggiorna se diverso
-IMAGE_FOLDER = "mani_blackjack"  # Cartella con immagini da testare
+MODEL_PATH = "runs/detect/yolo_finetuned_blackjack2/weights/best.pt"  # <-- aggiorna se diverso
+IMAGE_FOLDER = "test_images"  # Cartella con immagini da testare
 OUTPUT_FOLDER = "test_results"     # Dove salvare i risultati
 CONFIDENCE_THRESHOLD = 0.3    # Soglia minima di confidenza
 RESIZE_DIM = (416, 416)  # Dimensione a cui ridimensionare le immagini
@@ -14,7 +14,7 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # === CARICA MODELLO YOLO ===
 model = YOLO(MODEL_PATH)
-
+ 
 # === CICLO SULLE IMMAGINI DELLA CARTELLA ===
 for filename in os.listdir(IMAGE_FOLDER):
     if filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
