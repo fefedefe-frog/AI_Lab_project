@@ -72,12 +72,11 @@ def generate(img_num_for_card: int= 10, output_path: str= OUTPUT_DIR_PATH):
 
 
         # Viene salvata l'immagine
-        img_name = f"{num + 1}.jpg"
-        card_output_full_path = os.path.join(card_output_dir_path, img_name)
+        card_output_full_path = os.path.join(card_output_dir_path, f"{num + 1}.jpg")
         cv2.imwrite(card_output_full_path, card_cropped)
 
         # Aggiorno il csv
-        csv_writer.writerow([card_output_full_path, seme, numero])
+        csv_writer.writerow([card_output_full_path.removeprefix(f"{OUTPUT_DIR_PATH}/"), seme, numero])
 
       # Va su di tre righe e cancella il contenuto
       if card_num+1 != len(card_folders): sys.stdout.write('\033[F\033[K\033[F\033[K')
