@@ -43,7 +43,8 @@ labels_output_dir_path= os.path.join(OUTPUT_DIR_PATH, "labels")
 os.makedirs(labels_output_dir_path, exist_ok=True)
 for card_num, card in enumerate(cards):
   for count in range(1, img_num_for_card+1):
-    print(f"\rCard: {card.split(".")[0]} di {card.split(".")[1]}\t|\tcard num:{card_num+1} out of {len(cards)}\t|\t\timage count: {count}/{img_num_for_card}", end="", flush=True)
+    numero, seme = card.split(".")
+    print(f"\rCard: {numero} di {seme}\t|\tcard num:{card_num+1} out of {len(cards)}\t|\t\timage count: {count}/{img_num_for_card}", end="", flush=True)
 
     # Carico l'immagine della carta
     card_path = os.path.join(INPUT_DIR_PATH, "cards", card)
