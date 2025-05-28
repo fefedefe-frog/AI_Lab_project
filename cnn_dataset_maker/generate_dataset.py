@@ -8,7 +8,7 @@ import numpy as np
 # Percorsi
 INPUT_DIR_PATH = "input_images"
 OUTPUT_DIR_PATH = "output"
-CSV_PATH = "./dataset.csv"
+CSV_PATH = "output/dataset.csv"
 
 img_num_for_card= 50
 
@@ -69,7 +69,7 @@ with open(CSV_PATH, "w", newline="") as csvfile:
 
       # Viene salvata l'immagine
       img_name = f"{num}.jpg"
-      card_output_full_path = os.path.join(card_output_dir_path, "images", img_name)
+      card_output_full_path = os.path.join(card_output_dir_path, img_name)
       cv2.imwrite(card_output_full_path, card_cropped)
 
       # Aggiorno il csv
