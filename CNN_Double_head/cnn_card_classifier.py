@@ -240,107 +240,107 @@ def testing_loop(dataloader, model):
     acc_test_numero.append(acc_numero)
     print(f"\n\nFinal Testing Accuracy \n\t- Seme: {acc_seme} || {acc_seme * 100:.2f}%\n\t- Numero: {acc_numero} || {acc_numero * 100:.2f}%")
 
+if __name__ == "__main__":
+    epochs = 50
+    # avvio l'allenamento del modello
+    for e in range(epochs):
+        print(f"\n\n====== Epoch {e}")
+        training_loop(train_loader, model, loss_fn, optimizer)
+        testing_loop(test_loader, model)
+    print("Fatto!")
 
-epochs = 50
-# avvio l'allenamento del modello
-for e in range(epochs):
-    print(f"\n\n====== Epoch {e}")
-    training_loop(train_loader, model, loss_fn, optimizer)
-    testing_loop(test_loader, model)
-print("Fatto!")
+    torch.save(model, "cnn_allenata.pth")
 
-torch.save(model, "cnn_allenata.pth")
+    # Confusion Matrixs
+    all_preds_seme = []
+    all_labels_seme = []
+    all_preds_numero = []
+    all_labels_numero = []
+    model.eval()
+    with torch.no_grad():
+        for images, seme_labels, numero_labels in test_loader:
 
-# Confusion Matrixs
-all_preds_seme = []
-all_labels_seme = []
-all_preds_numero = []
-all_labels_numero = []
-model.eval()
-with torch.no_grad():
-    for images, seme_labels, numero_labels in test_loader:
+            images = images.to(device)
+            pred_seme, pred_numero = model(images)
 
-        images = images.to(device)
-        pred_seme, pred_numero = model(images)
+            preds_seme = pred_seme.argmax(dim=1).cpu().numpy()
+            all_preds_seme.extend(preds_seme)
+            all_labels_seme.extend(seme_labels.numpy())
 
-        preds_seme = pred_seme.argmax(dim=1).cpu().numpy()
-        all_preds_seme.extend(preds_seme)
-        all_labels_seme.extend(seme_labels.numpy())
+            preds_numero = pred_numero.argmax(dim=1).cpu().numpy()
+            all_preds_numero.extend(preds_numero)
+            all_labels_numero.extend(numero_labels.numpy())
 
-        preds_numero = pred_numero.argmax(dim=1).cpu().numpy()
-        all_preds_numero.extend(preds_numero)
-        all_labels_numero.extend(numero_labels.numpy())
+    # Confusion Matrix per SEME
+    cm_seme = confusion_matrix(all_labels_seme, all_preds_seme)
+    disp_seme = ConfusionMatrixDisplay(confusion_matrix=cm_seme, display_labels=dataset.seme_classes)
+    fig_seme, ax = plt.subplots()
+    fig_seme.savefig("confusion_matrix_seme.png")
+    disp_seme.plot(ax=ax)
+    plt.title("Confusion Matrix - Seme")
+    plt.show()
 
-# Confusion Matrix per SEME
-cm_seme = confusion_matrix(all_labels_seme, all_preds_seme)
-disp_seme = ConfusionMatrixDisplay(confusion_matrix=cm_seme, display_labels=dataset.seme_classes)
-fig_seme, ax = plt.subplots()
-fig_seme.savefig("confusion_matrix_seme.png")
-disp_seme.plot(ax=ax)
-plt.title("Confusion Matrix - Seme")
-plt.show()
-
-# Confusion Matrix per NUMERO
-cm_numero = confusion_matrix(all_labels_numero, all_preds_numero)
-disp_numero = ConfusionMatrixDisplay(confusion_matrix=cm_numero, display_labels=dataset.numero_classes)
-fig_numero, ax = plt.subplots()
-fig_numero.savefig("confusion_matrix_numero.png")
-disp_numero.plot(ax=ax)
-plt.title("Confusion Matrix - Numero")
-plt.show()
+    # Confusion Matrix per NUMERO
+    cm_numero = confusion_matrix(all_labels_numero, all_preds_numero)
+    disp_numero = ConfusionMatrixDisplay(confusion_matrix=cm_numero, display_labels=dataset.numero_classes)
+    fig_numero, ax = plt.subplots()
+    fig_numero.savefig("confusion_matrix_numero.png")
+    disp_numero.plot(ax=ax)
+    plt.title("Confusion Matrix - Numero")
+    plt.show()
 
 
-fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
 
-# Loss - Training e Testing
-axs[0, 0].plot(epochs, train_losses_seme, label="Train Loss", color='blue')
-axs[0, 0].plot(epochs, testing_losses_seme, label="Test Loss", color='orange')
-axs[0, 0].set_title("Loss")
-axs[0, 0].set_xlabel("Epoche")
-axs[0, 0].set_ylabel("Loss")
-axs[0, 0].legend()
-axs[0, 0].grid(True)
+    # Loss - Training e Testing
+    axs[0, 0].plot(epochs, train_losses_seme, label="Train Loss", color='blue')
+    axs[0, 0].plot(epochs, testing_losses_seme, label="Test Loss", color='orange')
+    axs[0, 0].set_title("Loss")
+    axs[0, 0].set_xlabel("Epoche")
+    axs[0, 0].set_ylabel("Loss")
+    axs[0, 0].legend()
+    axs[0, 0].grid(True)
 
-# Loss - Training e Testing
-axs[0, 0].plot(epochs, train_losses_numero, label="Train Loss", color='blue')
-axs[0, 0].plot(epochs, testing_losses_numero, label="Test Loss", color='orange')
-axs[0, 0].set_title("Loss")
-axs[0, 0].set_xlabel("Epoche")
-axs[0, 0].set_ylabel("Loss")
-axs[0, 0].legend()
-axs[0, 0].grid(True)
+    # Loss - Training e Testing
+    axs[0, 0].plot(epochs, train_losses_numero, label="Train Loss", color='blue')
+    axs[0, 0].plot(epochs, testing_losses_numero, label="Test Loss", color='orange')
+    axs[0, 0].set_title("Loss")
+    axs[0, 0].set_xlabel("Epoche")
+    axs[0, 0].set_ylabel("Loss")
+    axs[0, 0].legend()
+    axs[0, 0].grid(True)
 
-# Accuratezza numero
-axs[0, 1].plot(epochs, accuracy_numero, label="Training Accuracy Numero", color='green')
-axs[0, 1].set_title("Accuratezza Numero")
-axs[0, 1].set_xlabel("Epoche")
-axs[0, 1].set_ylabel("Accuratezza")
-axs[0, 1].grid(True)
+    # Accuratezza numero
+    axs[0, 1].plot(epochs, accuracy_numero, label="Training Accuracy Numero", color='green')
+    axs[0, 1].set_title("Accuratezza Numero")
+    axs[0, 1].set_xlabel("Epoche")
+    axs[0, 1].set_ylabel("Accuratezza")
+    axs[0, 1].grid(True)
 
-# Accuratezza seme
-axs[1, 0].plot(epochs, accuracy_seme, label="Training Accuracy Seme", color='purple')
-axs[1, 0].set_title("Accuratezza Seme")
-axs[1, 0].set_xlabel("Epoche")
-axs[1, 0].set_ylabel("Accuratezza")
-axs[1, 0].grid(True)
+    # Accuratezza seme
+    axs[1, 0].plot(epochs, accuracy_seme, label="Training Accuracy Seme", color='purple')
+    axs[1, 0].set_title("Accuratezza Seme")
+    axs[1, 0].set_xlabel("Epoche")
+    axs[1, 0].set_ylabel("Accuratezza")
+    axs[1, 0].grid(True)
 
-# Accuratezza test numero
-axs[1, 0].plot(epochs, acc_test_seme, label="Testing Accuracy Seme", color='purple')
-axs[1, 0].set_title("Accuratezza Seme")
-axs[1, 0].set_xlabel("Epoche")
-axs[1, 0].set_ylabel("Accuratezza")
-axs[1, 0].grid(True)
+    # Accuratezza test numero
+    axs[1, 0].plot(epochs, acc_test_seme, label="Testing Accuracy Seme", color='purple')
+    axs[1, 0].set_title("Accuratezza Seme")
+    axs[1, 0].set_xlabel("Epoche")
+    axs[1, 0].set_ylabel("Accuratezza")
+    axs[1, 0].grid(True)
 
-# Accuratezza test seme
-axs[1, 0].plot(epochs, acc_test_numero, label="Testing Accuracy Seme", color='purple')
-axs[1, 0].set_title("Accuratezza Seme")
-axs[1, 0].set_xlabel("Epoche")
-axs[1, 0].set_ylabel("Accuratezza")
-axs[1, 0].grid(True)
+    # Accuratezza test seme
+    axs[1, 0].plot(epochs, acc_test_numero, label="Testing Accuracy Seme", color='purple')
+    axs[1, 0].set_title("Accuratezza Seme")
+    axs[1, 0].set_xlabel("Epoche")
+    axs[1, 0].set_ylabel("Accuratezza")
+    axs[1, 0].grid(True)
 
-# Spazio vuoto / futuro utilizzo (o puoi disegnare CM qui)
-axs[1, 1].axis("off")
+    # Spazio vuoto / futuro utilizzo (o puoi disegnare CM qui)
+    axs[1, 1].axis("off")
 
-plt.tight_layout()
-plt.savefig("results.png")
-plt.close()
+    plt.tight_layout()
+    plt.savefig("results.png")
+    plt.close()
