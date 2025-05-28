@@ -1,61 +1,22 @@
-import os
-import cv2
 import torch
 from torchvision import transforms
-import torchmetrics
-import numpy as np
-import pandas as pd
+from torch.utils.data import DataLoader, random_split
 from torch import nn, optim
-from torch.utils.data import Dataset, DataLoader, random_split
+import torchmetrics
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
+from cli_utilities.simple_progress_bar import ProgressBar
+from loops import training_loop, testing_loop
+from CardDataset import CardDataset
 
-class CardDataset(Dataset):
-    def __init__(self, csv_file_path: str, transform: transforms) -> None:
-        self.csv_data = pd.read_csv(csv_file_path)
-        self.transforms = transform
-
-        self.seme_classes = sorted(self.csv_data["seme"].unique())
-        self.numero_classes = sorted(self.csv_data["numero"].unique())
-
-        self.seme_to_idx = {cls: idx for idx, cls in enumerate(self.seme_classes)}
-        self.numero_to_idx = {cls: idx for idx, cls in enumerate(self.numero_classes)}
-
-        self.idx_to_seme = {v: k for k, v in self.seme_to_idx.items()}
-        self.idx_to_numero = {v: k for k, v in self.numero_to_idx.items()}
-
-    def __len__(self) -> int:
-        return len(self.csv_data)
-
-    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        riga = self.csv_data.iloc[idx]
-
-        image_path = "../cnn_dataset_maker/" + str(riga["image_path"])
-        seme = self.seme_to_idx[riga["seme"]]
-        numero = self.numero_to_idx[riga["numero"]]
-
-        image = cv2.imread(image_path)
-        if image is None:
-            raise FileNotFoundError(f"{image_path} not found")
-
-        if self.transforms:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            out_img = self.transforms(image)
-        else:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            image = cv2.resize(image, (128, 128))
-            image = image.astype(np.float32) / 255.0
-            image = np.transpose(image, (2, 0, 1))
-            out_img = torch.tensor(image, dtype=torch.float32)
-
-        return out_img, torch.tensor(seme, dtype=torch.long), torch.tensor(numero, dtype=torch.long)
-
-
+# TODO: testare con solo i weight balancer, poi eventualmente testare separando
+#  gli shared layers in due sezioni separate, direttamente attaccate alla loro testa
 class DualHeadCNN(nn.Module):
-    def __init__(self, num_classi_seme: int, num_classi_numeri: int):
+    def __init__(self, num_classi_seme: int, num_classi_numeri: int) -> None:
         super(DualHeadCNN, self).__init__()
 
+        # Sezione della cnn che si occupa del feature extraction
         self.featuresExtractor = nn.Sequential(
             nn.Conv2d(3, 32, 3, padding=1),
             nn.ReLU(),
@@ -73,32 +34,69 @@ class DualHeadCNN(nn.Module):
             nn.ReLU(),
         )
 
+        # Sezione della cnn contenente le activation functions
         self.flatten = nn.Flatten()
         self.shared_layers = nn.Sequential(
             nn.Linear(256 * 30 * 22, 256),
             nn.ReLU(),
+
             nn.Linear(256, 256),
             nn.ReLU(),
+
             nn.Linear(256, 256),
             nn.ReLU(),
+
             nn.Linear(256, 256),
             nn.ReLU(),
         )
 
+        # Le due teste distinte per riconoscere i due tipi di classi differenti
         self.testa_seme = nn.Linear(256, num_classi_seme)
         self.testa_numero = nn.Linear(256, num_classi_numeri)
 
-    def forward(self, x):
-        x_features = self.featuresExtractor(x)
-        x_flatten = self.flatten(x_features)
-        x_shared = self.shared_layers(x_flatten)
+        # TODO: prima testare con solo i weights in loops.py, poi provare decommetando queste linee
+        #   e commentando da self.shared_layer ... a self.testa_numero
 
-        logits_seme = self.testa_seme(x_shared)
-        logits_numero = self.testa_numero(x_shared)
+        # self.testa_seme = nn.Sequential(
+        #     nn.Linear(256 * 30 * 22, 256),
+        #     nn.ReLU(),
+        #
+        #     nn.Linear(256, 256),
+        #     nn.ReLU(),
+        #
+        #     nn.Linear(256, 256),
+        #     nn.ReLU(),
+        # )
+        #
+        # self.testa_numero = nn.Sequential(
+        #     nn.Linear(256 * 30 * 22, 256),
+        #     nn.ReLU(),
+        #
+        #     nn.Linear(256, 128),
+        #     nn.ReLU(),
+        #
+        #     nn.Linear(128, 256),
+        #     nn.ReLU(),
+        #
+        #     nn.Linear(256, 256),
+        #     nn.ReLU(),
+        # )
+
+
+    def forward(self, x) -> tuple[torch.Tensor, torch.Tensor]:
+        x_features = self.featuresExtractor(x)      # Estrazione delle features
+        x_flatten = self.flatten(x_features)        # Trasformazione da array 3D a 2D
+        x_shared = self.shared_layers(x_flatten)    # Calcolo delle activation functions
+        # TODO: eventualmente commentare la riga precendente a questa e passare direttamente x_flatten ai due logits
+        
+        logits_seme = self.testa_seme(x_shared)     # Predizione del seme
+        logits_numero = self.testa_numero(x_shared) # Predizione del numero
 
         return logits_seme, logits_numero
 
 
+epochs= 50
+ProgressBar= ProgressBar()
 if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -107,106 +105,86 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)
     ])
 
-    dataset = CardDataset("../cnn_dataset_maker/output/dataset.csv", transform=transform)
+    dataset = CardDataset("./cnn_dataset_maker/output", "./cnn_dataset_maker/output/dataset.csv", transform=transform)
+
 
     train_size = int(0.8 * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
+
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = DualHeadCNN(num_classi_seme=len(dataset.seme_classes), num_classi_numeri=len(dataset.numero_classes)).to(device)
+    model = DualHeadCNN(num_classi_seme=len(dataset.classi_seme), num_classi_numeri=len(dataset.classi_numero)).to(device)
+
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0004)
 
-    metric_seme = torchmetrics.Accuracy(task='multiclass', num_classes=len(dataset.seme_classes)).to(device)
-    metric_numero = torchmetrics.Accuracy(task='multiclass', num_classes=len(dataset.numero_classes)).to(device)
+    metric_seme = torchmetrics.Accuracy(task='multiclass', num_classes=len(dataset.classi_seme)).to(device)
+    metric_numero = torchmetrics.Accuracy(task='multiclass', num_classes=len(dataset.classi_numero)).to(device)
 
-    train_losses_seme = []
-    train_losses_numero = []
-    testing_losses_seme = []
-    testing_losses_numero = []
-    accuracy_numero = []
-    accuracy_seme = []
-    acc_test_seme = []
-    acc_test_numero = []
+    # Dict di Array contenenti tutte le loss e le accuracy per poter fare il plot finale
+    losses_seme: dict= {"train": [], "test": []}
+    losses_numero: dict= {"train": [], "test": []}
+    accuracy_seme: dict= {"train": [], "test": []}
+    accuracy_numero: dict= {"train": [], "test": []}
 
-    def training_loop(dataloader):
-        model.train()
-        metric_seme.reset()
-        metric_numero.reset()
-        for batch, (images, seme_labels, numero_labels) in enumerate(dataloader):
-            images, seme_labels, numero_labels = images.to(device), seme_labels.to(device), numero_labels.to(device)
-            pred_seme, pred_numero = model(images)
-            loss_seme = loss_fn(pred_seme, seme_labels)
-            loss_numero = loss_fn(pred_numero, numero_labels)
+    # Dict di Array per le Confusion Matrix
+    all_labels: dict = {'seme': [], 'numero': []}
+    all_preds: dict = {'seme': [], 'numero': []}
 
-            train_losses_seme.append(loss_seme.item())
-            train_losses_numero.append(loss_numero.item())
-
-            loss = loss_seme + loss_numero
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            metric_seme.update(pred_seme, seme_labels)
-            metric_numero.update(pred_numero, numero_labels)
-
-        accuracy_seme.append(metric_seme.compute().item())
-        accuracy_numero.append(metric_numero.compute().item())
-
-    def testing_loop(dataloader):
-        model.eval()
-        metric_seme.reset()
-        metric_numero.reset()
-        with torch.no_grad():
-            for images, seme_labels, numero_labels in dataloader:
-                images, seme_labels, numero_labels = images.to(device), seme_labels.to(device), numero_labels.to(device)
-                seme_logits, numero_logits = model(images)
-
-                pred_seme = seme_logits.argmax(dim=1)
-                pred_numero = numero_logits.argmax(dim=1)
-
-                metric_seme.update(pred_seme, seme_labels)
-                metric_numero.update(pred_numero, numero_labels)
-
-                loss_s = loss_fn(seme_logits, seme_labels)
-                loss_n = loss_fn(numero_logits, numero_labels)
-                testing_losses_seme.append(loss_s.item())
-                testing_losses_numero.append(loss_n.item())
-
-        acc_test_seme.append(metric_seme.compute().item())
-        acc_test_numero.append(metric_numero.compute().item())
-
-    for epoch in range(50):
-        print(f"Epoch {epoch+1}/50")
-        training_loop(train_loader)
-        testing_loop(test_loader)
+    for epoch in range(epochs):
+        print(f"Epoch {ProgressBar.make_progress(epoch+1, epochs)} {epoch+1}/50")
+        losses_seme['train'], losses_numero['train'], accuracy_seme['train'], accuracy_numero['train']= training_loop(model, train_loader, metric_seme, metric_numero, loss_fn, optimizer, device)
+        all_labels, all_preds, losses_seme['test'], losses_numero['test'], accuracy_seme['test'], accuracy_numero['test']= testing_loop(model, train_loader, metric_seme, metric_numero, loss_fn, device)
+    print("fatto!")
 
     torch.save(model, "cnn_allenata.pth")
 
+
+
+    # Confusion Matrix per SEME
+    cm_seme = confusion_matrix(all_labels['seme'], all_preds['seme'])
+    disp_seme = ConfusionMatrixDisplay(confusion_matrix=cm_seme, display_labels=dataset.classi_seme)
+    fig_seme, ax = plt.subplots()
+    fig_seme.savefig("confusion_matrix_seme.png")
+    disp_seme.plot(ax=ax)
+    plt.title("Confusion Matrix - Seme")
+    plt.show()
+
+    # Confusion Matrix per NUMERO
+    cm_numero = confusion_matrix(all_labels['numero'], all_preds['numero'])
+    disp_numero = ConfusionMatrixDisplay(confusion_matrix=cm_numero, display_labels=dataset.classi_numero)
+    fig_numero, ax = plt.subplots()
+    fig_numero.savefig("confusion_matrix_numero.png")
+    disp_numero.plot(ax=ax)
+    plt.title("Confusion Matrix - Numero")
+    plt.show()
+
+
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
 
-    axs[0, 0].plot(train_losses_seme, label="Train Loss Seme", color='blue')
-    axs[0, 0].plot(testing_losses_seme, label="Test Loss Seme", color='orange')
+    axs[0, 0].plot(losses_seme['train'], label="Train Loss Seme", color='blue')
+    axs[0, 0].plot(losses_seme['test'], label="Test Loss Seme", color='orange')
     axs[0, 0].set_title("Loss Seme")
     axs[0, 0].legend()
 
-    axs[0, 1].plot(train_losses_numero, label="Train Loss Numero", color='green')
-    axs[0, 1].plot(testing_losses_numero, label="Test Loss Numero", color='red')
+    axs[0, 1].plot(losses_numero['train'], label="Train Loss Numero", color='green')
+    axs[0, 1].plot(losses_numero['test'], label="Test Loss Numero", color='red')
     axs[0, 1].set_title("Loss Numero")
     axs[0, 1].legend()
 
-    axs[1, 0].plot(accuracy_seme, label="Accuracy Seme", color='purple')
-    axs[1, 0].plot(acc_test_seme, label="Test Accuracy Seme", color='pink')
+    axs[1, 0].plot(accuracy_seme['train'], label="Train Accuracy Seme", color='purple')
+    axs[1, 0].plot(accuracy_seme['test'], label="Test Accuracy Seme", color='pink')
     axs[1, 0].set_title("Accuracy Seme")
     axs[1, 0].legend()
 
-    axs[1, 1].plot(accuracy_numero, label="Accuracy Numero", color='cyan')
-    axs[1, 1].plot(acc_test_numero, label="Test Accuracy Numero", color='brown')
+    axs[1, 1].plot(accuracy_numero['train'], label="Accuracy Numero", color='cyan')
+    axs[1, 1].plot(accuracy_numero['test'], label="Test Accuracy Numero", color='brown')
     axs[1, 1].set_title("Accuracy Numero")
     axs[1, 1].legend()
 
