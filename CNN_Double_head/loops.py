@@ -1,5 +1,12 @@
 import torch
 
+
+# IMPORTANTE: dato che la CNN ha due teste separate, e una impara più infretta dell'altra (i semi)
+# si applicano questi weitght per ribilanciare l'apprendimento, è il metodo più semplice e veloce
+# per ovviare al problema delle due teste
+WEIGHT_BALANCER_SEME: float= 0.3
+WEIGHT_BALANCER_NUMERO: float= 0.7
+
 def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimizer, device) -> tuple[list, list, list, list]:
     # Array contenenti tutte le loss e le accuracy per poter fare il plot finale
     losses_seme: list = []
@@ -30,7 +37,7 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
         losses_seme.append(loss_seme.item())
         losses_numero.append(loss_numero.item())
 
-        loss = loss_seme + loss_numero
+        loss = WEIGHT_BALANCER_SEME * loss_seme + WEIGHT_BALANCER_NUMERO * loss_numero
 
         # Eseguo il passaggio di backpropagation
         optimizer.zero_grad()
