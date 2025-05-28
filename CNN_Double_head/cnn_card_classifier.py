@@ -88,7 +88,7 @@ class DualHeadCNN(nn.Module):
         x_flatten = self.flatten(x_features)        # Trasformazione da array 3D a 2D
         x_shared = self.shared_layers(x_flatten)    # Calcolo delle activation functions
         # TODO: eventualmente commentare la riga precendente a questa e passare direttamente x_flatten ai due logits
-        
+
         logits_seme = self.testa_seme(x_shared)     # Predizione del seme
         logits_numero = self.testa_numero(x_shared) # Predizione del numero
 
