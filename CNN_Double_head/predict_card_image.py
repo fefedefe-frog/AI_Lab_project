@@ -13,7 +13,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # === Trasformazioni immagine (modifica se servono altre) ===
 transform = transforms.Compose([
     transforms.ToPILImage(),
-    transforms.Resize((240, 180)), #TODO: trasformare da 80x60 a 128x128es stretcha l'immagine e quindi la distorce, meglio aggiungere dei bordi se si vuole l'immagine quadrata
+    transforms.Resize((240, 180)),
     transforms.ToTensor(),  # converte e normalizza da [0–255] → [0–1]
     transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)  # ora [0–1] → [-1, 1]
 ])
@@ -28,7 +28,7 @@ img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 input_tensor = transform(img).unsqueeze(0).to(DEVICE)  # shape: (1, C, H, W)
 
 # === Carica modello ===
-model = torch.load(MODEL_PATH, map_location=DEVICE)
+model = torch.load(MODEL_PATH, map_location=DEVICE, weights_only=False)
 model.eval()
 
 # === Predizione ===
@@ -44,7 +44,7 @@ if isinstance(output, torch.Tensor):
 
 # Caso 2: output doppio (es. seme + numero)
 elif isinstance(output, (list, tuple)) and len(output) == 2:
-    output_numero, output_seme = output
+    output_seme, output_numero = output
     prob_n = F.softmax(output_numero, dim=1)
     prob_s = F.softmax(output_seme, dim=1)
 
