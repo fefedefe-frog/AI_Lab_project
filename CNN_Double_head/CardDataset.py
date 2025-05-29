@@ -15,7 +15,7 @@ class CardDataset(Dataset):
 
         # Definisco le classi per seme e numeri
         self.classi_seme: tuple= ("cuori", "quadri", "fiori", "picche")
-        self.classi_numero: tuple= ("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "K", "Q", "J")
+        self.classi_numero: tuple= ('A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K')
 
         # Converto le etichette testuali in indici numerici usabili dalla rete neurale
         self.seme_to_idx = {cls: idx for idx, cls in enumerate(self.classi_seme)}
