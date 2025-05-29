@@ -1,7 +1,6 @@
 import os
 import cv2
 from ultralytics import YOLO
-import torch
 
 # === CONFIGURAZIONE ===
 CARTELLA_IMMAGINI = "../YOLO_cards_detector/mani_blackjack"
