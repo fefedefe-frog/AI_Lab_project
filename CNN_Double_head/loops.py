@@ -48,8 +48,8 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
         optimizer.step()
 
         # Aggiorno le metriche
-        metric_seme.update(pred_seme, seme_labels)
-        metric_numero.update(pred_numero, numero_labels)
+        metric_seme.update(pred_seme.argmax(dim= 1), seme_labels)
+        metric_numero.update(pred_numero.argmax(dim= 1), numero_labels)
 
         # Stampa le statistiche ogni x batch(5 in questo caso)
         progress = ProgressBar.make_progress(batch + 1, dataloader_size)
