@@ -28,28 +28,35 @@ class DualHeadCNN(nn.Module):
         self.flatten = nn.Flatten()
 
         self.testa_seme = nn.Sequential(
-            nn.Linear(256 * 4 * 4, 256),
+            nn.Linear(256 * 4 * 4, 1024),
             nn.ReLU(),
 
-            nn.Linear(256, 256),
+            nn.Linear(1024, 512),
             nn.ReLU(),
 
-            nn.Linear(256, 256),
-            nn.ReLU(),
-        )
-
-        self.testa_numero = nn.Sequential(
-            nn.Linear(256 * 4 * 4, 256),
+            nn.Linear(512, 256),
             nn.ReLU(),
 
             nn.Linear(256, 128),
             nn.ReLU(),
 
-            nn.Linear(128, 256),
+            nn.Linear(128, num_classi_seme)
+        )
+
+        self.testa_numero = nn.Sequential(
+            nn.Linear(256 * 4 * 4, 1024),
             nn.ReLU(),
 
-            nn.Linear(256, 256),
+            nn.Linear(1024, 512),
             nn.ReLU(),
+
+            nn.Linear(512, 256),
+            nn.ReLU(),
+
+            nn.Linear(256, 128),
+            nn.ReLU(),
+
+            nn.Linear(128, num_classi_numeri)
         )
 
 
