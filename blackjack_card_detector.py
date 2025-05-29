@@ -2,8 +2,6 @@ import cv2
 import torch
 from torchvision import transforms
 from ultralytics import YOLO
-from CNN_Double_head.cnn_card_classifier import DualHeadCNN  # definita nel tuo file
-import matplotlib.pyplot as plt
 
 # === CONFIG ===
 YOLO_MODEL_PATH = "YOLO_cards_detector/runs/detect/yolo_finetuned_blackjack2/weights/best.pt"
