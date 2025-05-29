@@ -19,8 +19,10 @@ from CNN_Double_head.DualHeadCNN import DualHeadCNN
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 SCRIPT_DIR= os.path.dirname(os.path.realpath(__file__))
+OUTPUT_RESULT_FOLDER= "output"
+DEFAULT_EPOCHS= 10
+DEFAULT_BATCH_SIZE= 32
 
 
 def run(dataset_path: str, csv_path: str, batch_size: int, epochs: int, result_path: str) -> None:
@@ -142,18 +144,6 @@ def run(dataset_path: str, csv_path: str, batch_size: int, epochs: int, result_p
     plt.close()
 
 
-
-
-
-
-
-
-
-
-OUTPUT_RESULT_FOLDER= "output"
-DEFAULT_EPOCHS= 10
-DEFAULT_BATCH_SIZE= 32
-
 parser= argparse.ArgumentParser(description="CNN trainer script, this script launch the train for the cnn")
 parser.add_argument("dataset_path", type=str, help="path to the dataset folder")
 parser.add_argument("csv_path", type=str, help="path to the csv file")
@@ -166,8 +156,8 @@ if __name__ == "__main__":
     args= parser.parse_args()
 
     # Recupero datasaet e csv path
-    dt_path= Path(args.dataset_path).resolve()
-    c_path= Path(args.csv_path).resolve()
+    dt_path= f"{Path(args.dataset_path).resolve()}"
+    c_path= f"{Path(args.csv_path).resolve()}"
 
     # Recupero numero delle epochs
     e= args.epochs
@@ -199,4 +189,4 @@ if __name__ == "__main__":
     print(f"batch size:\t{b_size}")
     print(f"Output path:\n  -saved in:\t{output_path}\n  -folder name:\t{_folder_name}\n")
 
-    run(f"{dt_path}", f"{c_path}", b_size, e, output_path)
+    run(dt_path, c_path, b_size, e, output_path)
