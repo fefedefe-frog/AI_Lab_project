@@ -10,6 +10,9 @@ import torchmetrics
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
+# Aggiunge al path la cartella "sopra" rispetto a dove si trova lo script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from cli_utilities.simple_progress_bar import ProgressBar
 from CNN_Double_head.loops import training_loop, testing_loop
 from CNN_Double_head.CardDataset import CardDataset
@@ -37,33 +40,31 @@ class DualHeadCNN(nn.Module):
         self.featuresExtractor = nn.Sequential(
             nn.Conv2d(3, 32, 3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(2), 
 
             nn.Conv2d(32, 64, 3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(2), 
 
             nn.Conv2d(64, 128, 3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(2), 
 
             nn.Conv2d(128, 256, 3, padding=1),
             nn.ReLU(),
+            nn.AdaptiveAvgPool2d((4, 4)),  # Riduce l'output a (256, 4, 4)
         )
 
         # Sezione della cnn contenente le activation functions
         self.flatten = nn.Flatten()
         self.shared_layers = nn.Sequential(
-            nn.Linear(256 * 30 * 22, 256),
+            nn.Linear(256 * 4 * 4, 1024),
             nn.ReLU(),
 
-            nn.Linear(256, 256),
+            nn.Linear(1024, 512),
             nn.ReLU(),
 
-            nn.Linear(256, 256),
-            nn.ReLU(),
-
-            nn.Linear(256, 256),
+            nn.Linear(512, 256),
             nn.ReLU(),
         )
 
@@ -122,7 +123,7 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)
     ])
 
-    dataset = CardDataset("./cnn_dataset_maker/output", "./cnn_dataset_maker/output/dataset.csv", transform=transform)
+    dataset = CardDataset("../cnn_dataset_maker", "../cnn_dataset_maker/output/dataset.csv", transform=transform)
 
 
     train_size = int(0.8 * len(dataset))
@@ -174,8 +175,7 @@ if __name__ == "__main__":
         if epoch + 1 != epochs: sys.stdout.write("\033[F"*16)
     print("fatto!")
 
-    torch.save(model, os.path.join(OUTPUT_RESULT_PATH, "cnn_allenata.pth"))
-
+    torch.save(model, os.path.join(OUTPUT_RESULT_PATH, "cnn_allenata_2.pth"))
 
 
     # Confusion Matrix per SEME
