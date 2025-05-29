@@ -2,6 +2,7 @@ import argparse
 import csv
 import os
 import sys
+from pathlib import Path
 
 import cv2
 import random
@@ -9,10 +10,13 @@ import numpy as np
 
 from cli_utilities.simple_progress_bar import ProgressBar
 
+
 # Percorsi
 SCRIPT_DIR= os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.abspath(os.path.join(SCRIPT_DIR, "..")))
+
 INPUT_DIR_PATH = f"{SCRIPT_DIR}/input_images"
-OUTPUT_DIR_PATH = f"{SCRIPT_DIR}/output"
+OUTPUT_DIR_PATH = f"{SCRIPT_DIR}/cnn_dataset_output"
 CSV_PATH = "dataset.csv"
 
 
@@ -21,14 +25,10 @@ ProgressBar= ProgressBar()
 
 def generate(img_num_for_card: int= 10, output_path: str= OUTPUT_DIR_PATH):
 
-  if output_path is None:
-    output_path = OUTPUT_DIR_PATH
-
   # Lista file
   card_folders = [folder for folder in os.listdir(INPUT_DIR_PATH)]
 
   os.makedirs(output_path, exist_ok=True)
-  os.makedirs(os.path.dirname(os.path.join(output_path, CSV_PATH)), exist_ok=True)
 
   with open(os.path.join(output_path, CSV_PATH), "w", newline="") as csvfile:
     csv_writer = csv.writer(csvfile)
@@ -92,4 +92,8 @@ parser.add_argument("-o", "--output_path", type=str, help="output directory path
 if __name__ == "__main__":
     args= parser.parse_args()
 
-    generate(args.image_num, args.output_path if args.output_path is not None else OUTPUT_DIR_PATH)
+    o_path= OUTPUT_DIR_PATH
+    if args.output_path is not None:
+      o_path = f"{Path(args.output_path).resolve()}/cnn_dataset_output"
+
+    generate(args.image_num, o_path)
