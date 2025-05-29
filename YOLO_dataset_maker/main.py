@@ -1,6 +1,8 @@
 import argparse
 import YOLO_dataset_maker.generate_dataset as generator
 
+# ATTENZIONE: per lanciare lo script:
+#   - DA ./Progetto -> python -m YOLO_dataset_maker.main <numero_di_carte_da_generare> -r
 parser= argparse.ArgumentParser(description="YOLO dataset maker, this script automatically generate the images and labels for yolo")
 parser.add_argument("image_num", type=int, help="how many images to generate")
 parser.add_argument("-o", "--output_path", type=str, help="output directory path where will be saved the dataset")
