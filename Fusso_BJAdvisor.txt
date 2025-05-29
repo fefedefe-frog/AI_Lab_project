@@ -4,6 +4,12 @@ FLUSSO BLACKJACK ADVISOR:
 === OBJECT DETECTION ===
 
 1. Scaricato il dataset https://www.kaggle.com/datasets/andy8744/playing-cards-object-detection-dataset con 14.000 immagini di train e rispettive labels
+    1.1 dato l'elevato numero di immagini contenute nel dataset, e la difficoltà nel trovare un dataset che fosse compatibile appieno con il nostro progetto
+        abbiamo pensato di creare un dataset per yolo da soli, per fare ciò abbiamo ideato uno script che usi openCV2 per recuperare le immagini delle carte
+        e di uno sfondo su cui piazzarle, poi tramite rotazioni e trasposizioni scelte randomicamente le carte vengono sovrapposte allo sfondo, e successivamente
+        vengono calcolate le informazioni relative alle bounding box che servono a yolo, per fare ciò abbiamo scelto delle foto di un set di carte che fossero tutte
+        uguali e delle dimensioni fatto ciò dato che le immagini sono pressoché simili fra di loro la zona a noi interessata era sempre la stessa (in fatto di coordinate)
+        ovvero l'angolo in alto a sinistra della carta, quello dove è scritto il valore della stessa.
 
 2. Utilizzo di convert_yolo_multi_to_single_class.py per modificare tutte le labels per renderle a classe singola (0 invece che da 0-52)
 
@@ -23,7 +29,32 @@ FLUSSO BLACKJACK ADVISOR:
 	7.1 test con lo script detect_cards_with_yolo.py
 
 === CNN ===
-TO DO
+1 inizialmente la cnn si doveva occupare di riconoscere tutta la carta, per cui era stato ideato uno script per generare un dataset compatibile con la cnn che contenesse
+    diverse immagini per le varie carte.
+
+2 dato il grande numero di classi (52) e la similarità delle varie carte fra di loro, abbiamo pensato che dividere il riconoscimento in seme e numero separati avrebbe aiutato
+    dato che ci sarebbero state solo 4 classi per i semi e 13 per i numeri. in più si è scelto di allenare la cnn solo sugli angoli della carta e non su tutta la carta.
+
+3 Per allenare separatamente la cnn a riconoscere seme e numero abbiamo optato per quella che viene chiamata una cnn a doppia testa.
+    La nostra cnn a doppia testa è strutturata in 3 grandi sezioni, la prima è la sezione di input originale, quella che riceve l'immagine
+     e si occupa di estrarne le feature con le convolution matrix, successivamente l'output di questo layer va in input alla sezione chiamata
+     "shared_layers" e come dice il nome contiene i layer di activation functions in comune tra le due teste, in fine il terzo blocco è la parte
+     delle teste, le teste in questo caso sono esclusivamente gli ultimi layer di output della cnn e sono una testa per il seme e una per il numero.
+
+4 dopo svariati tentativi si nota che la testa che si occupa di riconoscere il seme della carta ( da ora "testa seme") imparava molto più velocemente rispetto
+    alla testa che si occupa del riconoscimento del numero/valore della carta(da ora "testa numero") questo ci ha portati di fronte a un nuovo problema, la testa
+    seme andava in overfitting mentre la testa numero non imparava abbastanza, così cercando su internet abbiamo scoperto che esistono varie soluzioni a cio.
+
+     SOLUZIONE 1: implementare un sistema di bilanciamento dei pesi delle due teste, questo sistema è stato implementato nella sezione di training dove viene
+     calcolata la loss della cnn, dato che la loss totale della cnn è loss_testa_seme + loss_testa_numero abbiamo moltiplicato entrambi le loss per due valori
+     compresi tra 0 e 1, dove la loss_testa_seme era moltiplicata per un numero più grande di quello della loss_testa_numero.
+     Questa soluzione ha portato grandi progressi, e la cnn sembrava riconoscere quasi perfettamente le carte, senza avere troppi problemi, e la testa seme non
+     andava in overfitting
+
+     SOLUZIONE 2: poiché tramite le confusion matrix continuavano ad evidenziare dei problemi di predizione sulla testa numero abbiamo deciso di separare completamente
+     le due teste, dividendo la sezione shared layer in due e attaccandole direttamente alla propria testa, quindi ora la struttura della cnn è: sezione di layer input
+     con covolution matrix per estrazione delle feature dalle immagini e poi direttamente le due teste che contengono i layer con le rispettive activation function.
+     Questa soluzione ha portato ad un risultato simile alla soluzione precedente ma adesso anche la confusion matrix della testa numero sembra essere quasi perfetta
 
 === COLLEGAMENTO YOLO CON CNN ===
 
