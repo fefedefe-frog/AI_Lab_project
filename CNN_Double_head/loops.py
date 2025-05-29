@@ -7,8 +7,8 @@ ProgressBar= ProgressBar()
 # IMPORTANTE: dato che la CNN ha due teste separate, e una impara più infretta dell'altra (i semi)
 # si applicano questi weitght per ribilanciare l'apprendimento, è il metodo più semplice e veloce
 # per ovviare al problema delle due teste
-WEIGHT_BALANCER_SEME: float= 0.9        # Se aumenta troppo velocemente alzi il valore, sennò diminuisci
-WEIGHT_BALANCER_NUMERO: float= 0.1
+WEIGHT_BALANCER_SEME: float= 1        # Se aumenta troppo velocemente alzi il valore, sennò diminuisci
+WEIGHT_BALANCER_NUMERO: float= 1
 
 def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimizer, device) -> tuple[list, list, list, list]:
     # Array contenenti tutte le loss e le accuracy per poter fare il plot finale

@@ -57,58 +57,65 @@ class DualHeadCNN(nn.Module):
 
         # Sezione della cnn contenente le activation functions
         self.flatten = nn.Flatten()
-        self.shared_layers = nn.Sequential(
-            nn.Linear(256 * 4 * 4, 1024),
-            nn.ReLU(),
+        #self.shared_layers = nn.Sequential(
+        #    nn.Linear(256 * 4 * 4, 1024),
+        #    nn.ReLU(),
 
-            nn.Linear(1024, 512),
-            nn.ReLU(),
+        #    nn.Linear(1024, 512),
+        #    nn.ReLU(),
 
-            nn.Linear(512, 256),
-            nn.ReLU(),
-        )
+        #    nn.Linear(512, 256),
+        #    nn.ReLU(),
+        #)
 
         # Le due teste distinte per riconoscere i due tipi di classi differenti
-        self.testa_seme = nn.Linear(256, num_classi_seme)
-        self.testa_numero = nn.Linear(256, num_classi_numeri)
+        #self.testa_seme = nn.Linear(256, num_classi_seme)
+        #self.testa_numero = nn.Linear(256, num_classi_numeri)
 
         # TODO: prima testare con solo i weights, poi provare decommetando queste linee
         #   e commentando da self.shared_layer ... a self.testa_numero
 
-        # self.testa_seme = nn.Sequential(
-        #     nn.Linear(256 * 30 * 22, 256),
-        #     nn.ReLU(),
-        #
-        #     nn.Linear(256, 256),
-        #     nn.ReLU(),
-        #
-        #     nn.Linear(256, 256),
-        #     nn.ReLU(),
-        # )
-        #
-        # self.testa_numero = nn.Sequential(
-        #     nn.Linear(256 * 30 * 22, 256),
-        #     nn.ReLU(),
-        #
-        #     nn.Linear(256, 128),
-        #     nn.ReLU(),
-        #
-        #     nn.Linear(128, 256),
-        #     nn.ReLU(),
-        #
-        #     nn.Linear(256, 256),
-        #     nn.ReLU(),
-        # )
+        self.testa_seme = nn.Sequential(
+            nn.Linear(256 * 4 * 4, 1024),
+            nn.ReLU(),
+    
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+    
+            nn.Linear(512, 256),
+            nn.ReLU(),
+
+            nn.Linear(256, 128),
+            nn.ReLU(),
+
+            nn.Linear(128, num_classi_seme)
+        )
+    
+        self.testa_numero = nn.Sequential(
+            nn.Linear(256 * 4 * 4, 1024),
+            nn.ReLU(),
+    
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+    
+            nn.Linear(512, 256),
+            nn.ReLU(),
+    
+            nn.Linear(256, 128),
+            nn.ReLU(),
+
+            nn.Linear(128, num_classi_numeri)
+        )
 
 
     def forward(self, x) -> tuple[torch.Tensor, torch.Tensor]:
         x_features = self.featuresExtractor(x)      # Estrazione delle features
         x_flatten = self.flatten(x_features)        # Trasformazione da array 3D a 2D
-        x_shared = self.shared_layers(x_flatten)    # Calcolo delle activation functions
+        #x_shared = self.shared_layers(x_flatten)    # Calcolo delle activation functions
         # TODO: eventualmente commentare la riga precendente a questa e passare direttamente x_flatten ai due logits
-
-        logits_seme = self.testa_seme(x_shared)     # Predizione del seme
-        logits_numero = self.testa_numero(x_shared) # Predizione del numero
+    
+        logits_seme = self.testa_seme(x_flatten)     # Predizione del seme
+        logits_numero = self.testa_numero(x_flatten) # Predizione del numero
 
         return logits_seme, logits_numero
 
@@ -131,8 +138,8 @@ if __name__ == "__main__":
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

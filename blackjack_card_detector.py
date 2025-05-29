@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 # === CONFIG ===
 YOLO_MODEL_PATH = "YOLO_cards_detector/runs/detect/yolo_finetuned_blackjack2/weights/best.pt"
-CNN_MODEL_PATH = "CNN_Double_head/output_6/cnn_allenata_2.pth"
-IMAGE_PATH = "test_images_complete_net/test6.png"
+CNN_MODEL_PATH = "CNN_Double_head/separate_layer_v2/cnn_allenata_5.pth"
+IMAGE_PATH = "test_images_complete_net/test5.png"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # === 1. Carica YOLO
