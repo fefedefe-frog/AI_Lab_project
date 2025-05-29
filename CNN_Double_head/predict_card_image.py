@@ -3,8 +3,6 @@ import torch.nn.functional as F
 from torchvision import transforms
 import os
 import cv2
-from cnn_card_classifier import DualHeadCNN
-
 
 # === CONFIGURAZIONE ===
 MODEL_PATH = "cnn_allenata.pth"      # Path al tuo modello
