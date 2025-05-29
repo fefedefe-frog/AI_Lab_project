@@ -26,8 +26,9 @@ class CardDataset(Dataset):
 
     def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         riga = self.csv_data.iloc[idx]
-
-        image_path = f"{self.dataset_path}/{str(riga["image_path"])}"
+        
+        path_clean = str(riga['image_path']).replace('\\', '/')
+        image_path = f"{self.dataset_path}/{path_clean}"
         seme = self.seme_to_idx[riga["seme"]]
         numero = self.numero_to_idx[riga["numero"]]
 
