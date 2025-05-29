@@ -1,3 +1,7 @@
+import sys
+import os
+
+import numpy as np
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader, random_split
@@ -10,7 +14,20 @@ from cli_utilities.simple_progress_bar import ProgressBar
 from CNN_Double_head.loops import training_loop, testing_loop
 from CNN_Double_head.CardDataset import CardDataset
 
-# TODO: testare con solo i weight balancer, poi eventualmente testare separando
+
+# TODO: giova controlla se funziona, praticamente dovrebbe creare delle nuove cartelle per ogni run
+#  tipo "output", "output_1", "output_2", ecc. Così salviamo i vari dati in cartelle separate
+#  che magari torna utile per il report
+
+OUTPUT_RESULT_PATH= "output"
+i= 0
+while os.path.exists(OUTPUT_RESULT_PATH):
+    i+= 1
+    OUTPUT_RESULT_PATH = f"output_{i}"
+
+os.makedirs(OUTPUT_RESULT_PATH, exist_ok=True)
+
+# TODO: testare con solo i weight balancer(nel file loops.py), poi eventualmente testare separando
 #  gli shared layers in due sezioni separate, direttamente attaccate alla loro testa
 class DualHeadCNN(nn.Module):
     def __init__(self, num_classi_seme: int, num_classi_numeri: int) -> None:
@@ -54,7 +71,7 @@ class DualHeadCNN(nn.Module):
         self.testa_seme = nn.Linear(256, num_classi_seme)
         self.testa_numero = nn.Linear(256, num_classi_numeri)
 
-        # TODO: prima testare con solo i weights in loops.py, poi provare decommetando queste linee
+        # TODO: prima testare con solo i weights, poi provare decommetando queste linee
         #   e commentando da self.shared_layer ... a self.testa_numero
 
         # self.testa_seme = nn.Sequential(
@@ -138,7 +155,7 @@ if __name__ == "__main__":
     all_preds: dict = {'seme': [], 'numero': []}
 
     for epoch in range(epochs):
-        print(f"Epoch {ProgressBar.make_progress(epoch+1, epochs)} {epoch+1}/50")
+        print(f"\t\t== Epoch {epoch+1} ==")
         (losses_seme['train'],
          losses_numero['train'],
          accuracy_seme['train'],
@@ -151,27 +168,30 @@ if __name__ == "__main__":
          losses_numero['test'],
          accuracy_seme['test'],
          accuracy_numero['test']
-         )= testing_loop(model, train_loader, metric_seme, metric_numero, loss_fn, device)
+         )= testing_loop(model, test_loader, metric_seme, metric_numero, loss_fn, device)
+
+        # Ritorno su di 12 righe (usate dai print nel training_loop) e 4 (usate nel testing_loop) nel terminale così da avere sempre e solo le 13 righe che si aggiornano ogni ciclo
+        if epoch + 1 != epochs: sys.stdout.write("\033[F"*16)
     print("fatto!")
 
-    torch.save(model, "cnn_allenata.pth")
+    torch.save(model, os.path.join(OUTPUT_RESULT_PATH, "cnn_allenata.pth"))
 
 
 
     # Confusion Matrix per SEME
-    cm_seme = confusion_matrix(all_labels['seme'], all_preds['seme'])
+    cm_seme = confusion_matrix(np.concatenate(all_labels['seme']), np.concatenate(all_preds['seme']))
     disp_seme = ConfusionMatrixDisplay(confusion_matrix=cm_seme, display_labels=dataset.classi_seme)
     fig_seme, ax = plt.subplots()
-    fig_seme.savefig("confusion_matrix_seme.png")
+    fig_seme.savefig(os.path.join(OUTPUT_RESULT_PATH, "confusion_matrix_seme.png"))
     disp_seme.plot(ax=ax)
     plt.title("Confusion Matrix - Seme")
     plt.show()
 
     # Confusion Matrix per NUMERO
-    cm_numero = confusion_matrix(all_labels['numero'], all_preds['numero'])
+    cm_numero = confusion_matrix(np.concatenate(all_labels['numero']), np.concatenate(all_preds['numero']))
     disp_numero = ConfusionMatrixDisplay(confusion_matrix=cm_numero, display_labels=dataset.classi_numero)
     fig_numero, ax = plt.subplots()
-    fig_numero.savefig("confusion_matrix_numero.png")
+    fig_numero.savefig(os.path.join(OUTPUT_RESULT_PATH, "confusion_matrix_numero.png"))
     disp_numero.plot(ax=ax)
     plt.title("Confusion Matrix - Numero")
     plt.show()
@@ -200,5 +220,5 @@ if __name__ == "__main__":
     axs[1, 1].legend()
 
     plt.tight_layout()
-    plt.savefig("results.png")
+    plt.savefig(os.path.join(OUTPUT_RESULT_PATH, "results.png"))
     plt.close()
