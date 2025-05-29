@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from cli_utilities.simple_progress_bar import ProgressBar
-from loops import training_loop, testing_loop
-from CardDataset import CardDataset
+from CNN_Double_head.loops import training_loop, testing_loop
+from CNN_Double_head.CardDataset import CardDataset
 
 # TODO: testare con solo i weight balancer, poi eventualmente testare separando
 #  gli shared layers in due sezioni separate, direttamente attaccate alla loro testa
@@ -139,8 +139,19 @@ if __name__ == "__main__":
 
     for epoch in range(epochs):
         print(f"Epoch {ProgressBar.make_progress(epoch+1, epochs)} {epoch+1}/50")
-        losses_seme['train'], losses_numero['train'], accuracy_seme['train'], accuracy_numero['train']= training_loop(model, train_loader, metric_seme, metric_numero, loss_fn, optimizer, device)
-        all_labels, all_preds, losses_seme['test'], losses_numero['test'], accuracy_seme['test'], accuracy_numero['test']= testing_loop(model, train_loader, metric_seme, metric_numero, loss_fn, device)
+        (losses_seme['train'],
+         losses_numero['train'],
+         accuracy_seme['train'],
+         accuracy_numero['train']
+         )= training_loop(model, train_loader, metric_seme, metric_numero, loss_fn, optimizer, device)
+
+        (all_labels,
+         all_preds,
+         losses_seme['test'],
+         losses_numero['test'],
+         accuracy_seme['test'],
+         accuracy_numero['test']
+         )= testing_loop(model, train_loader, metric_seme, metric_numero, loss_fn, device)
     print("fatto!")
 
     torch.save(model, "cnn_allenata.pth")
