@@ -1,12 +1,14 @@
 import torch
 import sys
 
+from cli_utilities.simple_progress_bar import ProgressBar
+ProgressBar= ProgressBar()
 
 # IMPORTANTE: dato che la CNN ha due teste separate, e una impara più infretta dell'altra (i semi)
 # si applicano questi weitght per ribilanciare l'apprendimento, è il metodo più semplice e veloce
 # per ovviare al problema delle due teste
-WEIGHT_BALANCER_SEME: float= 0.3
-WEIGHT_BALANCER_NUMERO: float= 0.7
+WEIGHT_BALANCER_SEME: float= 0.9        # Se aumenta troppo velocemente alzi il valore, sennò diminuisci
+WEIGHT_BALANCER_NUMERO: float= 0.1
 
 def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimizer, device) -> tuple[list, list, list, list]:
     # Array contenenti tutte le loss e le accuracy per poter fare il plot finale
@@ -16,14 +18,13 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
     accuracy_numero: list = []
 
     model.train()
-    dataset_size = len(dataloader)
+    dataloader_size = len(dataloader)
 
     # Reset delle metriche
     metric_seme.reset()
     metric_numero.reset()
 
     # Recupero il batch di dati dal disco
-    first_print: bool= True
     for batch, (images, seme_labels, numero_labels) in enumerate(dataloader):
 
         images, seme_labels, numero_labels = images.to(device), seme_labels.to(device), numero_labels.to(device)
@@ -50,34 +51,32 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
         metric_seme.update(pred_seme, seme_labels)
         metric_numero.update(pred_numero, numero_labels)
 
-        # Stampa le statistiche ogni x batch(10 in questo caso)
-
-        if batch % 10 == 0:
-
-            if not first_print:
-                sys.stdout.write('\033[F\033[K\033[F\033[K')
-            else:
-                first_print= False
-
+        # Stampa le statistiche ogni x batch(5 in questo caso)
+        print(f"Train status: {ProgressBar.make_progress(batch+1, dataloader_size)}\t{f"{((batch+1) * 100) / dataloader_size:.2f}":>6}%", end="\r")
+        if batch % 4 == 0:
             loss, current = loss.item(), (batch + 1) * len(images)
             acc_seme = metric_seme.compute()
             acc_numero = metric_numero.compute()
 
-            print(f"Loss: {loss}, [{current:>5} / {dataset_size}]")
-            print(f"Accuracy seme: {acc_seme} || {acc_seme * 100:.2f}%")
-            print(f"Accuracy numero: {acc_numero} || {acc_numero * 100:.2f}%")
+            print(f"\n\n\t== Train batch {batch} result ==")
+            print(f"Loss:\t\t{loss:.4f}\t|| [{current:>5}/{dataloader_size}]")
+            print(f"Acc seme:\t{acc_seme:.4f}\t||{f"{acc_seme * 100:.2f}":>6}%")
+            print(f"Acc num:\t{acc_numero:.4f}\t||{f"{acc_numero * 100:.2f}":>6}%")
+            sys.stdout.write("\033[F" * 6)
 
-    # Stampo l'accuratezza a fine train
     acc_s = metric_seme.compute()
     acc_n = metric_numero.compute()
 
-    print("\n== Final Training Accuracy ==")
-    print(f"\t- Seme: {acc_s} || {acc_s * 100:.2f}%")
-    print(f"\t- Numero: {acc_n} || {acc_n * 100:.2f}%")
 
     # Aggiorno l'array per il plot finale
     accuracy_seme.append(acc_s.item())
     accuracy_numero.append(acc_n.item())
+
+    # Stampo l'accuratezza a fine train
+    print("\n"*5)
+    print("\n\t== Final Training Accuracy ==\t(for last epoch)")
+    print(f"- Seme:\t{acc_s:.4f}\t||\t{acc_s * 100:.2f}%")
+    print(f"- Numero:\t{acc_n:.4f}\t||\t{acc_n * 100:.2f}%")
 
     return losses_seme, losses_numero, accuracy_seme, accuracy_numero
 
@@ -92,12 +91,18 @@ def testing_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device)
     accuracy_seme: list = []
     accuracy_numero: list = []
 
-    model.eval()
+    dataloader_size = len(dataloader)
 
+    model.eval()
     metric_seme.reset()
     metric_numero.reset()
     with torch.no_grad():
-        for images, seme_labels, numero_labels in dataloader:
+
+        print("\n")
+        sys.stdout.write("\033[K")  # Pulisce la riga da eventuali residui di testo di epoch precedenti
+
+        for batch, (images, seme_labels, numero_labels) in enumerate(dataloader):
+            print(f"Testing status: {ProgressBar.make_progress(batch+1, dataloader_size)}", end="\r")
             images, seme_labels, numero_labels = images.to(device), seme_labels.to(device), numero_labels.to(device)
             seme_logits, numero_logits = model(images)
 
@@ -125,7 +130,11 @@ def testing_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device)
     # Stampo l'accuratezza a fine loop
     acc_s = metric_seme.compute()
     acc_n = metric_numero.compute()
-    print(f"\n\nFinal Testing Accuracy \n\t- Seme: {acc_s} || {acc_s * 100:.2f}%\n\t- Numero: {acc_n} || {acc_n * 100:.2f}%")
+
+    sys.stdout.write("\033[K")  # Pulisce la riga dalla progress bar
+    print("\t== Final Testing Accuracy ==\t(for last epoch)")
+    print(f"- Seme: {acc_s} || {acc_s * 100:.2f}%")
+    print(f"- Numero: {acc_n} || {acc_n * 100:.2f}%")
 
     accuracy_seme.append(acc_s.item())
     accuracy_numero.append(acc_n.item())
