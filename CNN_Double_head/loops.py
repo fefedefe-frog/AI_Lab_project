@@ -52,7 +52,9 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
         metric_numero.update(pred_numero, numero_labels)
 
         # Stampa le statistiche ogni x batch(5 in questo caso)
-        print(f"Train status: {ProgressBar.make_progress(batch+1, dataloader_size)}\t{f"{((batch+1) * 100) / dataloader_size:.2f}":>6}%", end="\r")
+        progress = ProgressBar.make_progress(batch + 1, dataloader_size)
+        percent = f"{((batch + 1) * 100) / dataloader_size:.2f}"
+        print(f"Train status: {progress}\t{percent:>6}%", end="\r")
         if batch % 4 == 0:
             loss, current = loss.item(), (batch + 1) * len(images)
             acc_seme = metric_seme.compute()
@@ -60,8 +62,10 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
 
             print(f"\n\n\t== Train batch {batch} result ==")
             print(f"Loss:\t\t{loss:.4f}\t|| [{current:>5}/{dataloader_size}]")
-            print(f"Acc seme:\t{acc_seme:.4f}\t||{f"{acc_seme * 100:.2f}":>6}%")
-            print(f"Acc num:\t{acc_numero:.4f}\t||{f"{acc_numero * 100:.2f}":>6}%")
+            perc_seme = f"{acc_seme * 100:.2f}"
+            print(f"Acc seme:\t{acc_seme:.4f}\t||{perc_seme:>6}%")
+            perc_numero = f"{acc_numero * 100:.2f}"
+            print(f"Acc seme:\t{acc_numero:.4f}\t||{perc_numero:>6}%")
             sys.stdout.write("\033[F" * 6)
 
     acc_s = metric_seme.compute()
@@ -111,10 +115,10 @@ def testing_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device)
 
             # Salvo il valori per le confusion matrix
             all_preds['seme'].append(pred_seme.cpu().numpy())
-            all_labels['seme'].append(seme_labels.numpy())
+            all_labels['seme'].append(seme_labels.cpu().numpy())
 
             all_preds['numero'].append(pred_numero.cpu().numpy())
-            all_labels['numero'].append(numero_labels.numpy())
+            all_labels['numero'].append(numero_labels.cpu().numpy())
 
             # Aggiorno le metriche
             metric_seme.update(pred_seme, seme_labels)
