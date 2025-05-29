@@ -1,0 +1,49 @@
+
+FLUSSO BLACKJACK ADVISOR: 
+
+=== OBJECT DETECTION ===
+
+1. Scaricato il dataset https://www.kaggle.com/datasets/andy8744/playing-cards-object-detection-dataset con 14.000 immagini di train e rispettive labels
+
+2. Utilizzo di convert_yolo_multi_to_single_class.py per modificare tutte le labels per renderle a classe singola (0 invece che da 0-52)
+
+3. Rimpicciolisco il dataset a 4000 di train, 1000 di valid e 1000 di test
+
+4. Traino su 30 epoche con yolov8n ma i risultati non sono ottimali (dataset1)
+
+5. Traino di nuovo su 30 epoche, ma con yolov8s, ora riconosce bene le immagini simili al dataset, ma non quelle che interessano a noi, che sono più digitali
+
+6. Decidiamo cosi di ampliare il dataset, inserendo anche immagini più simili a quelle che poi andremo ad utilizzare 
+(Per tutto il progetto, il riferimento per il tavolo da blackjack iniziale è un gioco gratuito online https://www.giochixl.it/da-tavolo/blackjack)
+	6.1 Eseguo quindi 40 screenshot del gioco
+	6.2 Utilizzo Roboflow per disegnare manualmente i bounding box che mi interessano per la creazione di un dataset per yolo
+	6.3 Sempre con Roboflow, applico semplici augmentation che portano il dataset a 101 immagini
+
+7. Traino su 30 epoche yolov8s utilizzando lo script train_yolo.py, su questo nuovo piccolo dataset (dataset2). Il risultato ora è ottimale (risultati in runs/detect/yolo_finetuned_blackjack2)
+	7.1 test con lo script detect_cards_with_yolo.py
+
+=== CNN ===
+TO DO
+
+=== COLLEGAMENTO YOLO CON CNN ===
+
+
+
+
+
+STORICO TRAIN CNN
+* shared_layers_v1
+	- batch = 32
+	- etichette K e J invertite
+
+* shared_layers_v2
+	- batch = 64
+	- etichette corrette
+
+* separate_layers_v1
+	- batch = 64
+	- 3 layers per seme e 4 per numero
+
+* separate_layers_v2
+	- batch = 64
+	- 4 layers per seme e 4 per numero
