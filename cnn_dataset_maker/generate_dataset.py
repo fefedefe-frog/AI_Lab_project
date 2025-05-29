@@ -92,4 +92,4 @@ parser.add_argument("-o", "--output_path", type=str, help="output directory path
 if __name__ == "__main__":
     args= parser.parse_args()
 
-    generate(args.image_num, args.output_path)
+    generate(args.image_num, args.output_path if args.output_path is not None else OUTPUT_DIR_PATH)
