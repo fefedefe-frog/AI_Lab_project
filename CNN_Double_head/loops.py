@@ -1,4 +1,5 @@
 import torch
+import sys
 
 
 # IMPORTANTE: dato che la CNN ha due teste separate, e una impara più infretta dell'altra (i semi)
@@ -22,6 +23,7 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
     metric_numero.reset()
 
     # Recupero il batch di dati dal disco
+    first_print: bool= True
     for batch, (images, seme_labels, numero_labels) in enumerate(dataloader):
 
         images, seme_labels, numero_labels = images.to(device), seme_labels.to(device), numero_labels.to(device)
@@ -51,22 +53,27 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
         # Stampa le statistiche ogni x batch(10 in questo caso)
 
         if batch % 10 == 0:
+
+            if not first_print:
+                sys.stdout.write('\033[F\033[K\033[F\033[K')
+            else:
+                first_print= False
+
             loss, current = loss.item(), (batch + 1) * len(images)
-
-            print(f"\nLoss: {loss}, [{current:>5} / {dataset_size}]")
-
             acc_seme = metric_seme.compute()
-
             acc_numero = metric_numero.compute()
 
-            print(
-                f"Accuracy seme: {acc_seme} || {acc_seme * 100:.2f}%\nAccuracy numero: {acc_numero} || {acc_numero * 100:.2f}%")
+            print(f"Loss: {loss}, [{current:>5} / {dataset_size}]")
+            print(f"Accuracy seme: {acc_seme} || {acc_seme * 100:.2f}%")
+            print(f"Accuracy numero: {acc_numero} || {acc_numero * 100:.2f}%")
 
     # Stampo l'accuratezza a fine train
     acc_s = metric_seme.compute()
     acc_n = metric_numero.compute()
-    print(
-        f"Final Training Accuracy \n\t- Seme: {acc_s} || {acc_s * 100:.2f}%\n\t- Numero: {acc_n} || {acc_n * 100:.2f}%")
+
+    print("\n== Final Training Accuracy ==")
+    print(f"\t- Seme: {acc_s} || {acc_s * 100:.2f}%")
+    print(f"\t- Numero: {acc_n} || {acc_n * 100:.2f}%")
 
     # Aggiorno l'array per il plot finale
     accuracy_seme.append(acc_s.item())
