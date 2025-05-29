@@ -3,8 +3,9 @@ import csv
 import cv2
 
 # === CONFIGURAZIONE ===
-CARTELLA_IMMAGINI = "./boundingBox_dataset"
-CSV_PATH = "./output/dataset.csv"
+SCRIPT_DIR= os.path.dirname(os.path.realpath(__file__))
+CARTELLA_IMMAGINI = f"{SCRIPT_DIR}/boundingBox_dataset"
+CSV_PATH = f"{SCRIPT_DIR}/output/dataset.csv"
 PATH_STATICO = "boundingBox_dataset"  # usato come valore "path" nel CSV
 
 # === CONTROLLA SE CSV ESISTE E APRILO IN MODALITÀ APPEND ===
@@ -44,5 +45,5 @@ with open(CSV_PATH, mode='a', newline='') as csvfile:
         cv2.destroyAllWindows()
 
         # Scrivi nel CSV
-        writer.writerow([f"{PATH_STATICO}\{nome_file}",seme,numero])
+        writer.writerow([f"{PATH_STATICO}/{nome_file}",seme,numero])
         print(f"✅ Salvato: {nome_file} → {seme} {numero}")
