@@ -17,7 +17,7 @@ def rotated_rect_size(width: int, height: int, angle_deg: int) -> tuple:
 
 
 # Percorsi
-INPUT_DIR_PATH = "input_images"
+INPUT_DIR_PATH = "../../yolo_dataset_maker/input_images"
 OUTPUT_DIR_PATH = "output_dataset/rotation"
 
 # Dimensioni fisse

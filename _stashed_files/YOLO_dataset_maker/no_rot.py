@@ -4,7 +4,7 @@ import random
 import numpy as np
 
 # Percorsi
-INPUT_DIR_PATH = "input_images"
+INPUT_DIR_PATH = "../../yolo_dataset_maker/input_images"
 OUTPUT_DIR_PATH = "output_dataset/fixed"
 
 CARD_SIZE= (500, 726)
