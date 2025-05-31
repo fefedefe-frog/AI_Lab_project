@@ -1,5 +1,5 @@
 import argparse
-import YOLO_dataset_maker.generate_dataset as generator
+import yolo_dataset_maker.generate_dataset as generator
 
 parser= argparse.ArgumentParser(description="YOLO dataset maker, this script automatically generate the images and labels for yolo")
 parser.add_argument("image_num", type=int, help="how many images to generate")
