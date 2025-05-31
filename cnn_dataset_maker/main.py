@@ -16,7 +16,7 @@ SCRIPT_DIR= os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.abspath(os.path.join(SCRIPT_DIR, "..")))
 
 INPUT_DIR_PATH = f"{SCRIPT_DIR}/input_images"
-OUTPUT_DIR_PATH = f"{SCRIPT_DIR}/cnn_dataset_output"
+OUTPUT_DIR_PATH = f"{SCRIPT_DIR}/cnn_dataset"
 CSV_PATH = "dataset.csv"
 
 
