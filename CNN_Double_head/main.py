@@ -25,7 +25,7 @@ DEFAULT_EPOCHS= 10
 DEFAULT_BATCH_SIZE= 32
 
 
-def run(dataset_path: str, csv_path: str, batch_size: int, epochs: int, result_path: str) -> None:
+def run_train(dataset_path: str, csv_path: str, batch_size: int, epochs: int, result_path: str) -> None:
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((240, 180)),
@@ -189,4 +189,4 @@ if __name__ == "__main__":
     print(f"batch size:\t{b_size}")
     print(f"Output path:\n  -saved in:\t{output_path}\n  -folder name:\t{_folder_name}\n")
 
-    run(dt_path, c_path, b_size, e, output_path)
+    run_train(dt_path, c_path, b_size, e, output_path)
