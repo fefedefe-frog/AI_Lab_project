@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 class DualHeadCNN(nn.Module):
-    def __init__(self, num_classi_seme: int, num_classi_numeri: int) -> None:
+    def __init__(self, num_classi_seme: int= 4, num_classi_numeri: int= 13) -> None:
         super(DualHeadCNN, self).__init__()
 
         # Sezione della cnn che si occupa del feature extraction
