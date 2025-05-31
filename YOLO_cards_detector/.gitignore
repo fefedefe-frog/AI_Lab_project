@@ -1,6 +1,5 @@
 /blackjackDataset
 /mani_blackjack
-/runs
 !/runs/detect/*/weights/best.pg
 /test_images
 /test_results
