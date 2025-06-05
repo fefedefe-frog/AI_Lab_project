@@ -1,16 +1,19 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Any
 
 import cv2
-import torch
+import gradio as gr
+
 
 from CNN_Double_head.DualHeadCNN import DualHeadCNN
-from CNN_Double_head.predict_card_image import run_model as run_cnn_model
+from CNN_Double_head.predict_card_image import run_model
 from application_fundamental_strategy import suggerisci_mossa
 
-from ultralytics import YOLO
+import torch
 from torchvision import transforms
+from ultralytics import YOLO
 
 import argparse
 
@@ -25,7 +28,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #CNN_MODEL.load_state_dict(state_dict)
 
 # Carico la CNN allenata
-CNN_MODEL_PATH = "CNN_Double_head/result/separated_layer_v1/cnn_allenata_4.pth"
+CNN_MODEL_PATH = "CNN_Double_head/result/separated_layer_v2/cnn_allenata_5.pth"
 CNN_MODEL = torch.load(CNN_MODEL_PATH, map_location=DEVICE)
 
 # Carico il modello allenato di YOLO
@@ -41,7 +44,7 @@ transform = transforms.Compose([
 ])
 
 # main com cam
-def useCam():
+def use_cam() -> None:
     # Avvio la webcam (0 è la cam di default
     cam = cv2.VideoCapture(0)
 
@@ -68,7 +71,7 @@ def useCam():
                 cv2.waitKey(0)
 
                 # Predizione CNN
-                pred_seme, pred_numero= run_cnn_model(cropped, CNN_MODEL)
+                pred_seme, pred_numero= run_model(cropped, CNN_MODEL)
 
                 # Preparo l'etichetta da mostrare a schermo
                 etichetta = f"{pred_numero[0]}({pred_numero[1]*100:.2f}%) di {pred_seme[0]}({pred_seme[1]*100:.2f}%)"
@@ -86,30 +89,77 @@ def useCam():
             break
 
 # Main senza cam
-def noCam(img_path: str):
+def no_cam(img_path: str) -> None:
 
-    IMAGE_SPLITTER = 416//2 # Per differenziare le carte del dealer (in alto) da quelle in basso (del player)
+    # === 1. Carica immagine intera
+    img = cv2.imread(img_path)
+    img_rgb= cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # === 2. Carica CNN
     CNN_MODEL.eval()
 
-    # === 3. Carica immagine intera
-    img = cv2.imread(img_path)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
     # Ottiengo la dimensione
     height, width, _ = img.shape
 
     # Disegno la linea centrale
-    cv2.line(img, (0, (height//2)-1), (width-1, (height//2)-1), (255, 0, 255), 3)
+    cv2.line(img, (0, (height // 2) - 1), (width - 1, (height // 2) - 1), (255, 0, 255), 3)
 
     # Disegno le scritte "Dealer", "Player"
-    cv2.putText(img, "Dealer", (5, height//2 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-    cv2.putText(img, "Player", (5, height//2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(img, "Dealer", (5, height // 2 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(img, "Player", (5, height // 2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
-    # === 4. Applica YOLO
+    # === 2. Applica YOLO
     results = YOLO_MODEL(img_rgb)
-    print(results)
+
+    # Inizializzo Array carte
+    carta_dealer = ""
+    carte_player = []
+
+    for r in results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = box.xyxy[0].int().tolist()
+            cropped = img_rgb[y1:y2, x1:x2]
+
+            # Uso la CNN per predirre il valore della carta
+            pred_seme, pred_numero = run_model(cropped,
+                                               CNN_MODEL)  # Due tuple, restituiscono la predizione con la percentuale di predizione
+
+            etichetta = f"{pred_numero[0]} di {pred_seme[0]}"
+
+            if y1 < IMAGE_SPLITTER:
+                carta_dealer = pred_numero[0]
+
+                # Disegna box e label
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(img, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            elif y1 < 300:
+                carte_player.append(pred_numero[0])
+
+                # Disegna box e label
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(img, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+            print(f"[✓] Carta rilevata: {etichetta} @ [{x1}, {y1}, {x2}, {y2}]")
+
+    print("carta Dealer: " + str(carta_dealer) + "\ncarte Player: " + str(carte_player))
+
+    # === 3. Chiamo la funzione che applica la strategia fondamentale
+    mossa: str = suggerisci_mossa(carte_player, carta_dealer)
+    print("mossa: " + str(mossa))
+    cv2.putText(img, f"Sugg.: {mossa}", (width // 2, height // 2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,(125, 125, 125), 2)
+
+
+IMAGE_SPLITTER = 416//2 # Per differenziare le carte del dealer (in alto) da quelle in basso (del player)
+def run_evalutation(img_rgb) -> Any:
+    # === 1. Carica CNN
+    CNN_MODEL.eval()
+
+    # Ottiengo la dimensione
+    height, width, _ = img_rgb.shape
+
+
+    # === 2. Applica YOLO
+    results = YOLO_MODEL(img_rgb)
     
     # Inizializzo Array carte
     carta_dealer = ""
@@ -119,77 +169,98 @@ def noCam(img_path: str):
         for box in r.boxes:
             x1, y1, x2, y2 = box.xyxy[0].int().tolist()
             cropped = img_rgb[y1:y2, x1:x2]
-            # cv2.imshow("bounding box", cv2.cvtColor(cropped, cv2.COLOR_RGB2BGR))
-            # cv2.waitKey(0)
 
-            # Preprocess
-            input_tensor = transform(cropped).unsqueeze(0).to(DEVICE)
+            # Uso la CNN per predirre il valore della carta
+            pred_seme, pred_numero= run_model(cropped, CNN_MODEL)   # Due tuple, restituiscono la predizione con la percentuale di predizione
 
-            # Predizione CNN
-            with torch.no_grad():
-                out_suit, out_num = CNN_MODEL(input_tensor)
+            etichetta = f"{pred_numero[0]} di {pred_seme[0]}"
 
-            prob_n = torch.softmax(out_num, dim=1)
-            prob_s = torch.softmax(out_suit, dim=1)
-            pred_n = torch.argmax(prob_n, dim=1).item()
-            pred_s = torch.argmax(prob_s, dim=1).item()
-
-            # === Mappa predizione ad etichetta leggibile
-            numero_labels = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-            seme_labels = ['cuori', 'quadri', 'fiori', 'picche']
-            etichetta = f"{numero_labels[pred_n]} di {seme_labels[pred_s]}"
-
-            if (y1 < IMAGE_SPLITTER):
-                carta_dealer = numero_labels[pred_n]
+            if y1 < IMAGE_SPLITTER:
+                carta_dealer = pred_numero[0]
 
                 # Disegna box e label
-                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(img, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            elif(y1 < 300):
-                carte_player.append(numero_labels[pred_n])
+                cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 125, 0), 2)
+                cv2.putText(img_rgb, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 125, 0), 2)
+            elif y1 < 300:
+                carte_player.append(pred_numero[0])
 
                 # Disegna box e label
-                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(img, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 125, 0), 2)
+                cv2.putText(img_rgb, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 125, 0), 2)
                     
             print(f"[✓] Carta rilevata: {etichetta} @ [{x1}, {y1}, {x2}, {y2}]")
 
-
     print("carta Dealer: " + str(carta_dealer) + "\ncarte Player: " + str(carte_player))
 
-    # === 5. Chiamo la funzione che applica la strategia fondamentale
-    print(suggerisci_mossa(carte_player, carta_dealer))
+    # === 3. Chiamo la funzione che applica la strategia fondamentale
+    mossa: str= suggerisci_mossa(carte_player, carta_dealer)
+    print("mossa: " + str(mossa))
 
-    # === 6. Mostra immagine con carte etichettate
-    cv2.imshow("Carte Rilevate", img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    dealer_img= img_rgb[:height//2, :, :]
+    player_img= img_rgb[height//2+1:, :, :]
+    return (
+        dealer_img,
+        player_img,
+        carta_dealer,
+        ', '.join(carte_player),
+        mossa
+    )
 
+
+def use_gradio() -> None:
+
+    # creo la gui tramite i blocchi di gradio
+    with gr.Blocks() as demo:
+        gr.Markdown("BlackJack game helper")
+
+        # La prima riga conterrà le due sezioni per le immagini, una di input e una di output
+        with gr.Row():
+            with gr.Column():
+                input_image = gr.Image(label="Input")
+                btn = gr.Button("Run Predict")
+
+            with gr.Column():
+                with gr.Column():
+                    dealer_card = gr.Textbox(label="Carta Dealer", interactive=False)
+                    dealer_output = gr.Image(label="Dealer Image")
+
+                with gr.Column():
+                    player_output = gr.Image(label="Player Image")
+                    with gr.Row():
+                        player_cards = gr.Textbox(label="Carte Player", interactive=False)
+                        mossa_text = gr.Textbox(label="Mossa Consigliata", interactive=False)
+
+        btn.click(
+            fn=run_evalutation,
+            inputs=input_image,
+            outputs=[
+                dealer_output,
+                player_output,
+                dealer_card,
+                player_cards,
+                mossa_text
+            ])
+
+    demo.launch()
 
 parser= argparse.ArgumentParser(description="YOLO card detector, this script start the detection on a passed image, the image can be one, a folder, or directly from the cam")
-parser.add_argument("-o", "--output_path", type=str, help="output path where will be saved the results")
 
 # Creo un gruppo di argomenti che si autoescludono
 group= parser.add_mutually_exclusive_group(required= True)
 group.add_argument("-s", "--screenshot_path", type=str, help="path of the image to be detected")
-group.add_argument("-f", "--folder_path", type=str, help="path of the folder that contain the images to be detected")
+group.add_argument("-g", "--use_gradio", help="path of the folder that contain the images to be detected", action="store_true")
 group.add_argument("-c", "--use_cam", help="start the detection by using the webcam", action="store_true")
 
 
 if __name__ == "__main__":
-    # TODO Avviare cam con opencv2, fare screen del frame, dividere in due immagini
-    #  img_sopra(dealer) img_sotto(player), passare le immagini a yolo, e poi le rilevazioni
-    #  di yolo alla cnn, infine calcolare la mossa da fare e restituire il risultato a schermo
-
     args = parser.parse_args()
-
-    o_path= ""
-    if args.output_path is not None:
-        o_path = f"{Path(args.output_path)}"
 
     if args.screenshot_path is not None:
         input_path= f"{Path(args.screenshot_path).resolve()}"
-        noCam(input_path)
+        no_cam(input_path)
 
-    elif args.use_cam:
-        useCam()
+    elif args.use_gradio is not None:
+        use_gradio()
+
+    elif args.use_cam is not None:
+        use_cam()
