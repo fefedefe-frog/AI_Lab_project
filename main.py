@@ -126,7 +126,7 @@ def no_cam(img_path: str) -> None:
 
             etichetta = f"{pred_numero[0]} di {pred_seme[0]}"
 
-            if y1 < IMAGE_SPLITTER:
+            if y1 < height//2:
                 carta_dealer = pred_numero[0]
 
                 # Disegna box e label
@@ -147,16 +147,16 @@ def no_cam(img_path: str) -> None:
     mossa: str = suggerisci_mossa(carte_player, carta_dealer)
     print("mossa: " + str(mossa))
     cv2.putText(img, f"Sugg.: {mossa}", (width // 2, height // 2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,(125, 125, 125), 2)
+    cv2.imshow("Model detection", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-
-IMAGE_SPLITTER = 416//2 # Per differenziare le carte del dealer (in alto) da quelle in basso (del player)
 def run_evalutation(img_rgb) -> Any:
     # === 1. Carica CNN
     CNN_MODEL.eval()
 
     # Ottiengo la dimensione
     height, width, _ = img_rgb.shape
-
 
     # === 2. Applica YOLO
     results = YOLO_MODEL(img_rgb)
@@ -175,13 +175,13 @@ def run_evalutation(img_rgb) -> Any:
 
             etichetta = f"{pred_numero[0]} di {pred_seme[0]}"
 
-            if y1 < IMAGE_SPLITTER:
+            if y1 < height//2:
                 carta_dealer = pred_numero[0]
 
                 # Disegna box e label
                 cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 125, 0), 2)
                 cv2.putText(img_rgb, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 125, 0), 2)
-            elif y1 < 300:
+            elif y1 < height - 300:
                 carte_player.append(pred_numero[0])
 
                 # Disegna box e label
@@ -216,19 +216,21 @@ def use_gradio() -> None:
         # La prima riga conterrà le due sezioni per le immagini, una di input e una di output
         with gr.Row():
             with gr.Column():
-                input_image = gr.Image(label="Input")
+                # Permette il caricamento di immagini sia tramite immagini dirette, che tramite frame della camera
+                input_image = gr.Image(sources=["webcam", "upload"], type="numpy", label= "Input")
+
                 btn = gr.Button("Run Predict")
 
             with gr.Column():
                 with gr.Column():
-                    dealer_card = gr.Textbox(label="Carta Dealer", interactive=False)
-                    dealer_output = gr.Image(label="Dealer Image")
+                    dealer_card = gr.Textbox(label= "Carta Dealer", interactive= False)
+                    dealer_output = gr.Image(label= "Dealer Image")
 
                 with gr.Column():
-                    player_output = gr.Image(label="Player Image")
+                    player_output = gr.Image(label= "Player Image")
                     with gr.Row():
-                        player_cards = gr.Textbox(label="Carte Player", interactive=False)
-                        mossa_text = gr.Textbox(label="Mossa Consigliata", interactive=False)
+                        player_cards = gr.Textbox(label= "Carte Player", interactive= False)
+                        mossa_text = gr.Textbox(label= "Mossa Consigliata", interactive= False)
 
         btn.click(
             fn=run_evalutation,
