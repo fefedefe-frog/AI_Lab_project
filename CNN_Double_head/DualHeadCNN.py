@@ -37,10 +37,7 @@ class DualHeadCNN(nn.Module):
             nn.Linear(512, 256),
             nn.ReLU(),
 
-            nn.Linear(256, 128),
-            nn.ReLU(),
-
-            nn.Linear(128, num_classi_seme)
+            nn.Linear(256, num_classi_seme)
         )
 
         self.testa_numero = nn.Sequential(

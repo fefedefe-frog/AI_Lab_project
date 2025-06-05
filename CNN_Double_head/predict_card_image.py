@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import Union, Tuple
 
 import torch
 import torch.nn.functional as functional
@@ -28,7 +29,7 @@ TRANSFORM = transforms.Compose([
 ])
 
 
-def run_model(image, model_to_use) -> tuple[tuple[str, float], tuple[str, float]] | tuple[str, float]:
+def run_model(image, model_to_use) -> Union[Tuple[Tuple[str, float], Tuple[str, float]], Tuple[str, float]]:
 
     input_tensor = TRANSFORM(image).unsqueeze(0).to(DEVICE)  # shape: (1, C, H, W)
 

@@ -22,7 +22,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 SCRIPT_DIR= os.path.dirname(os.path.realpath(__file__))
 OUTPUT_RESULT_FOLDER= "output"
 DEFAULT_EPOCHS= 10
-DEFAULT_BATCH_SIZE= 32
+DEFAULT_BATCH_SIZE= 64
 
 
 def run_train(dataset_path: str, csv_path: str, batch_size: int, epochs: int, result_path: str) -> None:
