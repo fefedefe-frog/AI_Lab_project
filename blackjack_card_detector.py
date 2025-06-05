@@ -2,10 +2,11 @@ import cv2
 import torch
 from torchvision import transforms
 from ultralytics import YOLO
+from CNN_Double_head.DualHeadCNN import DualHeadCNN
 
 # === CONFIG ===
 YOLO_MODEL_PATH = "YOLO_cards_detector/runs/detect/yolo_finetuned_blackjack2/weights/best.pt"
-CNN_MODEL_PATH = "CNN_Double_head/result/separate_layer_v2/cnn_allenata_5.pth"
+CNN_MODEL_PATH = "CNN_Double_head/separate_layer_v1/cnn_allenata_4.pth"
 IMAGE_PATH = "test_images_complete_net/test5.png"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
