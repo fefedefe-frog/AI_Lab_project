@@ -243,7 +243,7 @@ def use_gradio() -> None:
                 mossa_text
             ])
 
-    demo.launch()
+    demo.launch(share=True)
 
 parser= argparse.ArgumentParser(description="YOLO card detector, this script start the detection on a passed image, the image can be one, a folder, or directly from the cam")
 
