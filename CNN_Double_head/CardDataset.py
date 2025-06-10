@@ -1,3 +1,4 @@
+import os
 import cv2
 import pandas as pd
 import numpy as np
@@ -28,12 +29,13 @@ class CardDataset(Dataset):
     def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         riga = self.csv_data.iloc[idx]
         
-        path_clean = str(riga['image_path']).replace('\\', '/')
-        image_path = f"{self.dataset_path}/{path_clean}"
+        # path_clean = str(riga['image_path']).replace('\\', '/')
+        image_path = os.path.join(self.dataset_path, str(riga['image_path']))
         seme = self.seme_to_idx[riga["seme"]]
         numero = self.numero_to_idx[riga["numero"]]
 
-        image = cv2.imread(image_path)
+        image = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+
         if image is None:
             raise FileNotFoundError(f"{image_path} not found")
 
