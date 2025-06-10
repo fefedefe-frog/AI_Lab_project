@@ -12,6 +12,8 @@ import torchmetrics
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from cli_utilities.simple_progress_bar import ProgressBar
 from CNN_Double_head.loops import training_loop, testing_loop
 from CNN_Double_head.CardDataset import CardDataset
@@ -71,10 +73,10 @@ def run_train(dataset_path: str, csv_path: str, batch_size: int, epochs: int, re
             train_accuracy_numero
         ) = training_loop(model, train_loader, metric_seme, metric_numero, loss_fn, optimizer, device)
 
-        losses_seme['train'].extend(train_loss_seme)
-        losses_numero['train'].extend(train_loss_numero)
-        accuracy_seme['train'].extend(train_accuracy_seme)
-        accuracy_numero['train'].extend(train_accuracy_numero)
+        losses_seme['train'].append(np.mean(train_loss_seme))
+        losses_numero['train'].append(np.mean(train_loss_numero))
+        accuracy_seme['train'].append(np.mean(train_accuracy_seme))
+        accuracy_numero['train'].append(np.mean(train_accuracy_numero))
 
         (all_labels,
          all_preds,
@@ -84,10 +86,10 @@ def run_train(dataset_path: str, csv_path: str, batch_size: int, epochs: int, re
          test_accuracy_numero
          ) = testing_loop(model, test_loader, metric_seme, metric_numero, loss_fn, device)
 
-        losses_seme['test'].extend(test_loss_seme)
-        losses_numero['test'].extend(test_loss_numero)
-        accuracy_seme['test'].extend(test_accuracy_seme)
-        accuracy_numero['test'].extend(test_accuracy_numero)
+        losses_seme['test'].append(np.mean(test_loss_seme))
+        losses_numero['test'].append(np.mean(test_loss_numero))
+        accuracy_seme['test'].append(np.mean(test_accuracy_seme))
+        accuracy_numero['test'].append(np.mean(test_accuracy_numero))
 
         # Ritorno su di 12 righe (usate dai print nel training_loop) e 4 (usate nel testing_loop) nel terminale così da avere sempre e solo le 13 righe che si aggiornano ogni ciclo
         if epoch + 1 != epochs: sys.stdout.write("\033[F" * 16)
