@@ -48,7 +48,7 @@ def suggerisci_mossa(carte_player: list[str], carta_dealer: str) -> str:
     print("is_soft: " +  str(is_soft) + "\n")
     print("totale: " + str(totale) + "\n")
 
-    if len(carte_player) == 2 and carte_player[0] == carte_player[1]:
+    if len(carte_player) == 2 and converti_valore(carte_player[0]) == converti_valore(carte_player[1]):
       if(carte_player[0] in ["J", "Q", "K"]):
           carte_player[0] = "10"
       # Caso coppia
@@ -118,3 +118,7 @@ if __name__ == "__main__":
     print("=== TEST 6 ===")
     mossa3 = suggerisci_mossa(["2", "3"], "6")
     print("Mossa consigliata:", mossa3)  # DOUBLE
+
+    print("=== TEST 7 ===")
+    mossa3 = suggerisci_mossa(["J", "10"], "6")
+    print("Mossa consigliata:", mossa3)  # STAND
