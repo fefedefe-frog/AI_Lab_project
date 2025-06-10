@@ -30,12 +30,15 @@ class DualHeadCNN(nn.Module):
         self.testa_seme = nn.Sequential(
             nn.Linear(256 * 4 * 4, 1024),
             nn.ReLU(),
+            nn.Dropout(0.3),
 
             nn.Linear(1024, 512),
             nn.ReLU(),
+            nn.Dropout(0.3),
 
             nn.Linear(512, 256),
             nn.ReLU(),
+            nn.Dropout(0.3),
 
             nn.Linear(256, num_classi_seme)
         )
@@ -43,15 +46,19 @@ class DualHeadCNN(nn.Module):
         self.testa_numero = nn.Sequential(
             nn.Linear(256 * 4 * 4, 1024),
             nn.ReLU(),
+            nn.Dropout(0.3),
 
             nn.Linear(1024, 512),
             nn.ReLU(),
-
+            nn.Dropout(0.3),
+            
             nn.Linear(512, 256),
             nn.ReLU(),
+            nn.Dropout(0.3),
 
             nn.Linear(256, 128),
             nn.ReLU(),
+            nn.Dropout(0.3),
 
             nn.Linear(128, num_classi_numeri)
         )
