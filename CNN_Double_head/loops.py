@@ -84,7 +84,7 @@ def training_loop(model, dataloader, metric_seme, metric_numero, loss_fn, optimi
 
     return losses_seme, losses_numero, accuracy_seme, accuracy_numero
 
-def testing_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device) -> tuple[dict[str:list], dict[str:list], list, list, list, list]:
+def validating_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device) -> tuple[dict[str:list], dict[str:list], list, list, list, list]:
     # Dict di Array per le Confusion Matrix
     all_labels: dict = {'seme': [], 'numero': []}
     all_preds: dict = {'seme': [], 'numero': []}
@@ -106,7 +106,7 @@ def testing_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device)
         sys.stdout.write("\033[K")  # Pulisce la riga da eventuali residui di testo di epoch precedenti
 
         for batch, (images, seme_labels, numero_labels) in enumerate(dataloader):
-            print(f"Testing status: {ProgressBar.make_progress(batch+1, dataloader_size)}", end="\r")
+            print(f"Validation status: {ProgressBar.make_progress(batch+1, dataloader_size)}", end="\r")
             images, seme_labels, numero_labels = images.to(device), seme_labels.to(device), numero_labels.to(device)
             seme_logits, numero_logits = model(images)
 
@@ -136,7 +136,7 @@ def testing_loop(model, dataloader, metric_seme, metric_numero, loss_fn, device)
     acc_n = metric_numero.compute()
 
     sys.stdout.write("\033[K")  # Pulisce la riga dalla progress bar
-    print("\t== Final Testing Accuracy ==\t(for last epoch)")
+    print("\t== Final Validation Accuracy ==\t(for last epoch)")
     print(f"- Seme: {acc_s} || {acc_s * 100:.2f}%")
     print(f"- Numero: {acc_n} || {acc_n * 100:.2f}%")
 

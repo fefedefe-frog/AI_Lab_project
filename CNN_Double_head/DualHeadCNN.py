@@ -21,18 +21,14 @@ class DualHeadCNN(nn.Module):
 
             nn.Conv2d(128, 256, 3, padding=1),
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d((4, 4)),  # Riduce l'output a (256, 4, 4)
+            nn.AdaptiveAvgPool2d((2, 2)),  # Riduce l'output a (256, 4, 4)
         )
 
         # Sezione della cnn contenente le activation functions
         self.flatten = nn.Flatten()
 
         self.testa_seme = nn.Sequential(
-            nn.Linear(256 * 4 * 4, 1024),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-
-            nn.Linear(1024, 512),
+            nn.Linear(256 * 2 * 2, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
 
@@ -40,22 +36,22 @@ class DualHeadCNN(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.3),
 
-            nn.Linear(256, num_classi_seme)
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(128, num_classi_seme)
         )
 
         self.testa_numero = nn.Sequential(
-            nn.Linear(256 * 4 * 4, 1024),
+            nn.Linear(256 * 2 * 2, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
 
-            nn.Linear(1024, 512),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            
             nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(0.3),
-
+            
             nn.Linear(256, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
