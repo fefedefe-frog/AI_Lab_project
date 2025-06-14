@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import cv2
+import numpy as np
 import gradio as gr
 
 
@@ -23,13 +24,13 @@ sys.path.append(PROJECT_DIR)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Carico i pesi del modello della CNN
-#CNN_MODEL= DualHeadCNN()
-#state_dict= torch.load(os.path.join(PROJECT_DIR, "CNN_Double_head/result/separated_layer_v1/weights.pth"), map_location= DEVICE)
-#CNN_MODEL.load_state_dict(state_dict)
+CNN_MODEL= DualHeadCNN()
+state_dict= torch.load(os.path.join(PROJECT_DIR, "CNN_Double_head/result/output_e30_bs32_5/cnn_weights.pth"), map_location= DEVICE)
+CNN_MODEL.load_state_dict(state_dict)
 
 # Carico la CNN allenata
-CNN_MODEL_PATH = "CNN_Double_head/result/separated_layer_v2/cnn_allenata_5.pth"
-CNN_MODEL = torch.load(CNN_MODEL_PATH, map_location=DEVICE)
+# CNN_MODEL_PATH = "CNN_Double_head/result/separated_layer_v2/cnn_allenata_5.pth"
+# CNN_MODEL = torch.load(CNN_MODEL_PATH, map_location=DEVICE)
 
 # Carico il modello allenato di YOLO
 YOLO_MODEL= YOLO(os.path.join(PROJECT_DIR, "YOLO_cards_detector/runs/detect/yolo_finetuned_blackjack2/weights/best.pt"))
@@ -44,44 +45,94 @@ transform = transforms.Compose([
 ])
 
 # main com cam
-def use_cam() -> None:
-    # Avvio la webcam (0 è la cam di default
-    cam = cv2.VideoCapture(0)
+def use_cam(cam_device: int | str) -> None:
+    # Avvio la webcam (0 è la cam di default del computer, la stringa è un link ad una webcam tramite internet)
+    cam = cv2.VideoCapture(cam_device)
 
     if not cam.isOpened():
         print("Errore nell'apertura della videocamera")
 
-    while True:
-        # Catturo il frame e una variabile che indica se il frame è
-        # catturato correttamente
-        ret, frame = cam.read()
+    # Recupero le dimensioni della cam
+    width = int(cam.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    print(f"Larghezza (prop): {width}, Altezza (prop): {height}")
 
+    prev_frame= None
+    threshold= 30 #soglia di differenza tra frame
+
+    while True:
+        # catturo ogni 5 frame per evitare buffering
+        for _ in range(4):  # leggi 5 frame e scarta
+            cam.read()
+
+        ret, frame = cam.read()
         if not ret:
             break
 
+        # Controllo se ci sono differenze tra il frame recuperato e quello precendente
+        # per evitare che vengano eseguite le predizioni più volte sulla stessa immagine
+        gray= cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if prev_frame is not None:
+            diff= cv2.absdiff(gray, prev_frame)
+            non_zero_count= np.count_nonzero(diff)
+
+            # Se la differenza è minore del threshold salto l'inferenza
+            if non_zero_count < threshold:
+                prev_frame= gray
+                cv2.imshow("Model detection", frame)
+                continue
+
+
+        # Inizializzo Array carte
+        carta_dealer = ""
+        carte_player = []
+
         # Passo il frame ricevuto al modello, per la predizione
         results = YOLO_MODEL(frame, save=False)[0]
+
+        # Disegno la linea centrale
+        cv2.line(frame, (0, (height // 2) - 1), (width - 1, (height // 2) - 1), (0, 0, 0), 3)
+
+        # Disegno le scritte "Dealer", "Player"
+        cv2.putText(frame, "Dealer", (5, height // 2 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (125, 125, 0), 2)
+        cv2.putText(frame, "Player", (5, height // 2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 125, 125), 2)
 
         # Per ogni risultato di yolo eseguo la cnn
         for r in results:
             for box in r.boxes:
                 x1, y1, x2, y2 = box.xyxy[0].int().tolist()
                 cropped = frame[y1:y2, x1:x2]
-                cv2.imshow("bounding box", cv2.cvtColor(cropped, cv2.COLOR_RGB2BGR))
-                cv2.waitKey(0)
 
                 # Predizione CNN
                 pred_seme, pred_numero= run_model(cropped, CNN_MODEL)
 
                 # Preparo l'etichetta da mostrare a schermo
-                etichetta = f"{pred_numero[0]}({pred_numero[1]*100:.2f}%) di {pred_seme[0]}({pred_seme[1]*100:.2f}%)"
+                etichetta = f"{pred_numero[0]} di {pred_seme[0]}"
+                # print(f"[✓] Carta rilevata: {etichetta} (numero: {pred_numero[1]*100:.2f}%, seme: {pred_seme[1]*100:.2f}%) @ [{x1}, {y1}, {x2}, {y2}]")
 
-                print(f"[✓] Carta rilevata: {etichetta} @ [{x1}, {y1}, {x2}, {y2}]")
+                if y1 < height // 2:
+                    carta_dealer = pred_numero[0]
+
+                    # Disegna box e label
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (125, 125, 0), 2)
+                    cv2.putText(frame, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (125, 125, 0), 2)
+
+                elif y1 < ( height - (height * 30) // 100 ):
+                    carte_player.append(pred_numero[0])
+
+                    # Disegna box e label
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 125, 125), 2)
+                    cv2.putText(frame, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 125, 125), 2)
 
                 # Disegna box e label sull'immagine ricevuta in input
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                # cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # cv2.putText(frame, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
+        # === 3. Chiamo la funzione che applica la strategia fondamentale
+        mossa: str = suggerisci_mossa(carte_player, carta_dealer)
+        print("mossa: " + str(mossa))
+        cv2.putText(frame, f"Sugg.: {mossa}", (width // 2, height // 2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 0, 125), 2)
         cv2.imshow("Model detection", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -251,8 +302,8 @@ parser= argparse.ArgumentParser(description="YOLO card detector, this script sta
 group= parser.add_mutually_exclusive_group(required= True)
 group.add_argument("-s", "--screenshot_path", type=str, help="path of the image to be detected")
 group.add_argument("-g", "--use_gradio", help="path of the folder that contain the images to be detected", action="store_true")
-group.add_argument("-c", "--use_cam", help="start the detection by using the webcam", action="store_true")
-
+group.add_argument("-lc", "--use_local_cam", type=int, help="start the detection by using the cam of the computer")
+group.add_argument("-ic", "--use_internet_cam", type=str, help="start the detection by using a connection to a webcam")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -261,8 +312,11 @@ if __name__ == "__main__":
         input_path= f"{Path(args.screenshot_path).resolve()}"
         no_cam(input_path)
 
-    elif args.use_gradio is not None:
+    elif args.use_gradio:
         use_gradio()
 
-    elif args.use_cam is not None:
-        use_cam()
+    elif args.use_local_cam is not None:
+        use_cam(int(args.use_local_cam))
+
+    elif args.use_internet_cam is not None:
+        use_cam(args.use_internet_cam)
