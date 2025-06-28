@@ -21,7 +21,7 @@ class DualHeadCNN(nn.Module):
 
             nn.Conv2d(128, 256, 3, padding=1),
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d((2, 2)),  # Riduce l'output a (256, 4, 4)
+            nn.AdaptiveAvgPool2d((2, 2)),  # Riduce l'output a (256, 2, 2)
         )
 
         # Sezione della cnn contenente le activation functions
