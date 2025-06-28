@@ -232,7 +232,7 @@ def run_evalutation(img_rgb) -> Any:
                 # Disegna box e label
                 cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 125, 0), 2)
                 cv2.putText(img_rgb, etichetta, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 125, 0), 2)
-            elif y1 < height - 300:
+            elif y1 < ( height - (height * 30) // 100 ):
                 carte_player.append(pred_numero[0])
 
                 # Disegna box e label
@@ -268,7 +268,7 @@ def use_gradio() -> None:
         with gr.Row():
             with gr.Column():
                 # Permette il caricamento di immagini sia tramite immagini dirette, che tramite frame della camera
-                input_image = gr.Image(sources=["webcam", "upload"], type="numpy", label= "Input")
+                input_image = gr.Image(sources=["upload", "webcam"], type="numpy", label= "Input")
 
                 btn = gr.Button("Run Predict")
 
