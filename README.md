@@ -6,8 +6,8 @@ AI Lab è un corso pratico incentrato sull'applicazione di tecniche di machine l
 L'obiettivo è riconoscere automaticamente le carte da gioco presenti in un'immagine o in un feed video in tempo reale e suggerire la mossa ottimale da eseguire a blackjack, seguendo la **strategia fondamentale**.
 
 Il progetto è stato sviluppato in gruppo:
-- **Marco Linardi** ([GitHub](https://github.com/MarcoLinardi)): correzione bug, interazione tra i due modelli e sezione grafica
-- **Emanuele Bruni** ([GitHub](https://github.com/Emanuele-Bruni)): correzione bug, interazione tra i due modelli e sezione grafica
+- [Marco Linardi](https://github.com/MarcoLinardi): correzione bug, interazione tra i due modelli e sezione grafica
+- [Emanuele Bruni](https://github.com/Emanuele-Bruni): correzione bug, interazione tra i due modelli e sezione grafica
 - [Giovanni Ciarra](https://github.com/GiovanniCiarra): strategia fondamentale e rilevamento carte con YOLO
 - Sviluppatore CNN: architettura della rete neurale e generazione del dataset sintetico
 
