@@ -9,7 +9,7 @@ Il progetto è stato sviluppato in gruppo:
 - [Marco Linardi](https://github.com/MarcoLinardi): correzione bug, interazione tra i due modelli e sezione grafica
 - [Emanuele Bruni](https://github.com/Emanuele-Bruni): correzione bug, interazione tra i due modelli e sezione grafica
 - [Giovanni Ciarra](https://github.com/GiovanniCiarra): strategia fondamentale e rilevamento carte con YOLO
-- Sviluppatore CNN: architettura della rete neurale e generazione del dataset sintetico
+- Federico Iannucci (io): architettura della rete neurale CNN e script per la generazione del suo dataset
 
 ---
 
