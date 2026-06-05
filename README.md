@@ -1,115 +1,75 @@
-# 🃏 Blackjack Card Detector — AI Lab Project
+# Blackjack Card Detector — AI Lab Project
 
 Progetto universitario realizzato per l'esame di **AI Lab** presso la **Sapienza Università di Roma**.  
 AI Lab è un corso pratico incentrato sull'applicazione di tecniche di machine learning e computer vision su problemi reali, con sviluppo di modelli end-to-end.
 
-L'obiettivo di questo progetto è riconoscere automaticamente le carte da gioco presenti in un'immagine (o in un feed video) e suggerire la mossa ottimale da eseguire a blackjack, seguendo la **strategia fondamentale**.
-Il progetto è stato sviluppato in gruppo, io mi sono occupato dello sviluppo del modello di CNN e dello script per generarne il dataset, mentre i colleghi di corso:
-- [Giovanni ciarra](https://github.com/GiovanniCiarra): si è occupato del lato di strategia fondamentale e riconoscimento delle carte con YOLO
-- [Emanuele Bruni](https://github.com/MarcoLinardi): correzione bug, interazione tra i due modelli e sezione grafica
-- [Marco Linardi](https://github.com/Emanuele-Bruni): correzione bug, interazione tra i due modelli  e sezione grafica
+L'obiettivo è riconoscere automaticamente le carte da gioco presenti in un'immagine o in un feed video in tempo reale e suggerire la mossa ottimale da eseguire a blackjack, seguendo la **strategia fondamentale**.
+
+Il progetto è stato sviluppato in gruppo:
+- **Marco Linardi** ([GitHub](https://github.com/MarcoLinardi)): correzione bug, interazione tra i due modelli e sezione grafica
+- **Emanuele Bruni** ([GitHub](https://github.com/Emanuele-Bruni)): correzione bug, interazione tra i due modelli e sezione grafica
+- [Giovanni Ciarra](https://github.com/GiovanniCiarra): strategia fondamentale e rilevamento carte con YOLO
+- Sviluppatore CNN: architettura della rete neurale e generazione del dataset sintetico
 
 ---
 
-## 🧠 Come funziona
+## Come funziona
 
-Il sistema utilizza una **pipeline a due modelli** che lavorano in sequenza:
+Il sistema implementa una **pipeline a due modelli in cascata** che operano in sequenza su ogni frame o immagine in ingresso.
 
-1. **YOLO** — rileva le carte nell'immagine e ne estrae i bounding box
-2. **CNN a doppia testa** — classifica ogni carta rilevata predicendo in parallelo il **numero** (A, 2–10, J, Q, K) e il **seme** (♥ ♦ ♣ ♠)
+### Rilevamento — YOLO
 
-Il sistema divide visivamente l'inquadratura in due metà: la **metà superiore** è assegnata al dealer, quella **inferiore** al giocatore, ogniuna delle due parti di immagine vengono passate separatamente alla pipeline.
+Il primo stadio della pipeline utilizza un modello **YOLOv8s** fine-tuned su un dataset sintetico di carte da gioco. Il modello individua tutte le carte presenti nell'immagine e ne restituisce i bounding box con la relativa confidenza. Il dataset di training è stato generato sinteticamente: carte da gioco vengono posizionate su background casuali con variazioni di scala, rotazione e sovrapposizione parziale, replicando le condizioni di ripresa reali.
 
-Il modello YOLO individuerà ogni carta nell'immagine andando poi a passare la carta rilevata alla CNN.
+### Classificazione — CNN a doppia testa
 
-Il modello CNN andrà a rilevare il valore della carta per poi successivamente usare quel valore per suggerire una mossa tramite la strategia fondamentale 
+Per ogni carta rilevata da YOLO, la regione di interesse viene ritagliata, ridimensionata a 240×180 pixel e passata a una **CNN con architettura dual-head**. La rete condivide un unico feature extractor (quattro strati convoluzionali) e poi si divide in due teste di classificazione indipendenti:
+
+- **Testa numero**: predice il valore della carta in 13 classi (A, 2–10, J, Q, K)
+- **Testa seme**: predice il seme in 4 classi (cuori, quadri, fiori, picche)
+
+Questa architettura permette di apprendere una rappresentazione visiva comune della carta e specializzarsi separatamente sulle due proprietà da classificare. Anche il dataset per la CNN è sintetico, generato a partire da template base delle carte con augmentation.
+
+### Divisione spaziale dealer / player
+
+Il sistema adotta una convenzione spaziale: la **metà superiore** dell'inquadratura è assegnata al dealer, la **metà inferiore** al giocatore. Ogni bounding box viene assegnato all'uno o all'altro in base alla coordinata verticale del suo centro. Questa divisione funziona bene nel contesto d'uso previsto — un tavolo ripreso dall'alto — ed elimina la necessità di un modello dedicato al riconoscimento del ruolo.
+
+### Strategia fondamentale
+
+Una volta classificate tutte le carte, il sistema calcola il totale della mano del giocatore (gestendo correttamente gli assi come 1 o 11) e consulta le tabelle della **basic strategy** del blackjack, implementate per tre scenari: hard totals, soft totals e coppie. Il risultato è la mossa ottimale statistica: **HIT**, **STAND**, **DOUBLE** o **SPLIT**.
 
 ---
 
-## 📁 Struttura della repo
+## Architettura della repo
 
 ```
 AI_Lab_project/
 │
-├── CNN_Double_head/          # Architettura e pesi della CNN a doppia testa
-├── YOLO_cards_detector/      # Modello YOLO fine-tuned per il rilevamento carte
+├── CNN_Double_head/          # Definizione della rete DualHeadCNN, training loop e pesi
+├── YOLO_cards_detector/      # Script di training e pesi del modello YOLO fine-tuned
 │
-├── cnn_dataset_maker/        # Script per generare dataset sintetici per la CNN
-├── yolo_dataset_maker/       # Script per generare dataset sintetici per YOLO
+├── cnn_dataset_maker/        # Generazione del dataset sintetico per la CNN
+├── yolo_dataset_maker/       # Generazione del dataset sintetico per YOLO
 │
-├── cli_utilities/            # Utility varie da riga di comando
+├── cli_utilities/            # Utility da riga di comando condivise
 ├── test_images_complete_net/ # Immagini di test per la pipeline completa
 ├── REPORT/                   # Report scritto del progetto
 │
-├── main.py                              # Entry point principale con UI Gradio e supporto webcam
-├── blackjack_card_detector.py           # Script alternativo: esegue YOLO + CNN su un'immagine statica
-├── application_fundamental_strategy.py  # Logica della strategia di base del blackjack
-├── ISTRUZIONI.md                        # Istruzioni dettagliate per training e utilizzo
-└── .gitignore
+├── main.py                              # Entry point: Gradio, webcam locale/remota, immagine statica
+├── blackjack_card_detector.py           # Inference su immagine statica (pipeline completa)
+├── application_fundamental_strategy.py  # Tabelle e logica della strategia fondamentale
+└── ISTRUZIONI.md                        # Istruzioni per la generazione dei dataset e il training
 ```
 
 ---
 
-## 🖥️ Interfaccia — `main.py`
+## Tecnologie
 
-Il file `main.py` è il punto di ingresso principale dell'applicazione e offre quattro modalità di utilizzo, selezionabili da riga di comando:
-
-| Flag | Descrizione |
-|------|-------------|
-| `-s <path>` | Analizza un'immagine statica dal percorso specificato |
-| `-g` | Avvia l'interfaccia grafica **Gradio** nel browser |
-| `-lc <device>` | Usa la webcam locale del computer (es. `-lc 0`) |
-| `-ic <url>` | Si connette a una webcam remota tramite URL |
-
-### Interfaccia Gradio (`-g`)
-
-L'interfaccia web costruita con [Gradio](https://gradio.app/) permette di:
-- Caricare un'immagine o scattare una foto direttamente dalla webcam
-- Visualizzare separatamente le carte del dealer e del giocatore con i rispettivi bounding box
-- Leggere le carte identificate nei campi di testo dedicati
-- Ricevere la **mossa consigliata** (HIT / STAND / DOUBLE / SPLIT) in tempo reale
-
-### Modalità webcam (`-lc` / `-ic`)
-
-In modalità live la pipeline analizza il feed video in tempo quasi reale, saltando i frame identici al precedente per evitare inferenze ridondanti. Su ogni frame vengono disegnati bounding box colorati (giallo per il dealer, azzurro per il giocatore) e la mossa suggerita viene mostrata al centro dello schermo.
-
----
-
-## 🚀 Avvio rapido
-
-```bash
-# Interfaccia Gradio (consigliata)
-python main.py -g
-
-# Webcam locale
-python main.py -lc 0
-
-# Immagine statica
-python main.py -s test_images_complete_net/test5.png
-```
-
-Per le istruzioni complete su come generare i dataset e allenare i modelli, consulta **[ISTRUZIONI.md](./ISTRUZIONI.md)**.
-
----
-
-## ♟️ Strategia di base — `application_fundamental_strategy.py`
-
-Implementa le tabelle della strategia di base del blackjack per tre casistiche: hard totals, soft totals (mano con asso) e coppie. Data la mano del giocatore e la carta scoperta del banco, restituisce la mossa ottimale:
-
-```python
-from application_fundamental_strategy import suggerisci_mossa
-
-suggerisci_mossa(["A", "6"], "5")   # → "DOUBLE"
-suggerisci_mossa(["9", "9"], "7")   # → "STAND"
-suggerisci_mossa(["5", "3"], "6")   # → "DOUBLE"
-```
-
----
-
-## 🛠️ Tecnologie usate
-
-- [PyTorch](https://pytorch.org/) — training e inferenza della CNN
-- [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) — rilevamento oggetti
-- [Gradio](https://gradio.app/) — interfaccia grafica web
-- [OpenCV](https://opencv.org/) — elaborazione immagini e visualizzazione
-- Python 3.x
+| Libreria | Utilizzo |
+|----------|----------|
+| [PyTorch](https://pytorch.org/) | Architettura e training della CNN dual-head |
+| [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | Rilevamento carte (object detection) |
+| [Gradio](https://gradio.app/) | Interfaccia grafica web interattiva |
+| [OpenCV](https://opencv.org/) | Elaborazione immagini, visualizzazione bounding box, gestione webcam |
+| [scikit-learn](https://scikit-learn.org/) | Confusion matrix e metriche di valutazione |
+| Python 3.x | Linguaggio principale |
